@@ -1,4 +1,6 @@
---pasted from UC
+--  pasted from UC
+--  also it crashes a lot
+--  you probably should not be using it
 
 local ffi = require("ffi")
 
