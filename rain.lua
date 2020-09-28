@@ -37,8 +37,15 @@ ffi.cdef[[
     typedef void***(__thiscall* get_client_whatever_fn)(void*);
 ]]
 
-local checkbox = ui.new_checkbox("LUA", "A", "Special effects")
-local selected_effect = ui.new_combobox("LUA", "A", "Desired effect", {"Rain", "Snow"})
+local checkbox = ui.new_checkbox("VISUALS", "Effects", "Weather")
+local selected_effect = ui.new_combobox("VISUALS", "Effects", "Desired weather", {"Rain", "Snow"})
+
+local visibility_callback = function(ref)
+    ui.set_visible(selected_effect, ui.get(ref))
+end
+
+visibility_callback(checkbox)
+ui.set_callback(checkbox, visibility_callback)
 
 local client_interface = ffi.cast("void***", client.create_interface("client.dll", "VClient018"))
 local entlist_interface = ffi.cast("void***", client.create_interface("client.dll", "VClientEntityList003"))
@@ -120,9 +127,22 @@ local precipitation_handler = {
             self.rain_entity = nil
         end
     end
+    end,
+
+    shutdown = function(self)
+        if self.created_rain and self.precipitation_client_class and self.rain_entity_networkable then
+            local client_unknown = ffi.cast("get_client_whatever_fn", self.rain_entity_networkable[0][0])(self.rain_entity_networkable)
+            local client_thinkable = ffi.cast("get_client_whatever_fn", client_unknown[0][8])(client_unknown)
+
+            ffi.cast("release_entity_fn", client_thinkable[0][4])(client_thinkable)
+        end
     end
 }
 
 client.set_event_callback("pre_render", function()
     precipitation_handler:pre_render()
+end)
+
+client.set_event_callback("shutdown", function()
+    precipitation_handler:shutdown()
 end)
