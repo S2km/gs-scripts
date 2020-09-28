@@ -37,7 +37,8 @@ ffi.cdef[[
     typedef void***(__thiscall* get_client_whatever_fn)(void*);
 ]]
 
-local checkbox = ui.new_checkbox("LUA", "A", "Rain")
+local checkbox = ui.new_checkbox("LUA", "A", "Special effects")
+local selected_effect = ui.new_combobox("LUA", "A", "Desired effect", {"Rain", "Snow"})
 
 local client_interface = ffi.cast("void***", client.create_interface("client.dll", "VClient018"))
 local entlist_interface = ffi.cast("void***", client.create_interface("client.dll", "VClientEntityList003"))
@@ -53,9 +54,11 @@ local precipitation_handler = {
     rain_entity_networkable = nil,
     rain_entity = nil,
     precipitation_client_class = nil,
+    desired_effect = 0,
 
     pre_render = function(self)
         if ui.get(checkbox) and entity.get_local_player() then
+            local selected_effect = ui.get(selected_effect) == "Rain" and 0 or 1
             if not self.precipitation_client_class then
                 local cur_class = get_all_classes_fn(client_interface)
                 while(cur_class) do
@@ -71,7 +74,7 @@ local precipitation_handler = {
                 self.rain_entity_networkable = ffi.cast("void***", self.precipitation_client_class.create_fn(MAX_EDICTS - 1, 0))
                 if self.rain_entity_networkable then
                     self.rain_entity = ffi.cast("void***", get_entity_pointer_fn(entlist_interface, MAX_EDICTS - 1))
-                    entity.set_prop(MAX_EDICTS - 1, "m_nPrecipType", 0) --Not actually too sure on this working.
+                    entity.set_prop(MAX_EDICTS - 1, "m_nPrecipType", selected_effect) --Not actually too sure on this working.
 
                     ffi.cast("pre_data_update_fn", self.rain_entity_networkable[0][6])(self.rain_entity_networkable, 0)
                     ffi.cast("pre_data_change_fn", self.rain_entity_networkable[0][4])(self.rain_entity_networkable, 0)
@@ -92,7 +95,12 @@ local precipitation_handler = {
                     ffi.cast("post_data_update_fn", self.rain_entity_networkable[0][7])(self.rain_entity_networkable, 0)
 
                     self.created_rain = true
+                    self.desired_effect = selected_effect
                 end
+            end
+            if self.created_rain and self.desired_effect ~= selected_effect then
+                entity.set_prop(MAX_EDICTS - 1, "m_nPrecipType", selected_effect)
+                self.desired_effect = selected_effect
             end
         else if entity.get_local_player() and not ui.get(checkbox) and self.created_rain then
             self.created_rain = false
