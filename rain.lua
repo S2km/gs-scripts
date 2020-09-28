@@ -1,4 +1,6 @@
-﻿local ffi = require("ffi")
+--pasted from UC
+
+local ffi = require("ffi")
 
 ffi.cdef[[
     typedef void*(*create_client_class_fn)(int, int);
@@ -36,8 +38,6 @@ ffi.cdef[[
 ]]
 
 local checkbox = ui.new_checkbox("LUA", "A", "Rain")
-
-local panorama_meme = panorama.open()
 
 local client_interface = ffi.cast("void***", client.create_interface("client.dll", "VClient018"))
 local entlist_interface = ffi.cast("void***", client.create_interface("client.dll", "VClientEntityList003"))
