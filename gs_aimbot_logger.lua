@@ -1,5 +1,5 @@
 -- local variables for API functions. any changes to the line below will be lost on re-generation
-local bit_band, client_color_log, client_delay_call, client_eye_position, client_key_state, client_log, client_screen_size, client_set_event_callback, client_unset_event_callback, client_userid_to_entindex, database_read, database_write, entity_get_local_player, entity_get_player_name, entity_get_player_weapon, entity_get_prop, entity_hitbox_position, entity_is_alive, globals_chokedcommands, globals_lastoutgoingcommand, globals_realtime, globals_tickcount, plist_get, renderer_measure_text, renderer_text, require, table_concat, table_remove, ui_get, ui_new_button, ui_new_checkbox, ui_new_color_picker, ui_new_combobox, ui_new_multiselect, pairs, error, globals_absoluteframetime, json_stringify, math_cos, math_deg, math_floor, math_max, math_rad, math_sin, renderer_blur, renderer_circle, renderer_circle_outline, renderer_gradient, renderer_line, renderer_rectangle, renderer_world_to_screen, table_insert, table_sort, tostring, getmetatable, setmetatable, type, assert, ak, ui_mouse_position, ui_reference, ui_set_callback, ui_set_visible, unpack, vtable_bind, vtable_thunk = bit.band, client.color_log, client.delay_call, client.eye_position, client.key_state, client.log, client.screen_size, client.set_event_callback, client.unset_event_callback, client.userid_to_entindex, database.read, database.write, entity.get_local_player, entity.get_player_name, entity.get_player_weapon, entity.get_prop, entity.hitbox_position, entity.is_alive, globals.chokedcommands, globals.lastoutgoingcommand, globals.realtime, globals.tickcount, plist.get, renderer.measure_text, renderer.text, require, table.concat, table.remove, ui.get, ui.new_button, ui.new_checkbox, ui.new_color_picker, ui.new_combobox, ui.new_multiselect, pairs, error, globals.absoluteframetime, json.stringify, math.cos, math.deg, math.floor, math.max, math.rad, math.sin, renderer.blur, renderer.circle, renderer.circle_outline, renderer.gradient, renderer.line, renderer.rectangle, renderer.world_to_screen, table.insert, table.sort, tostring, getmetatable, setmetatable, type, assert, ak, ui.mouse_position, ui.reference, ui.set_callback, ui.set_visible, unpack, vtable_bind, vtable_thunk
+local bit_band, client_color_log, client_delay_call, client_eye_position, client_key_state, client_log, client_screen_size, client_set_event_callback, client_unset_event_callback, client_userid_to_entindex, database_read, database_write, entity_get_local_player, entity_get_player_name, entity_get_player_weapon, entity_get_prop, entity_hitbox_position, entity_is_alive, globals_chokedcommands, globals_lastoutgoingcommand, globals_realtime, globals_tickcount, plist_get, renderer_measure_text, renderer_text, require, table_concat, table_remove, ui_get, ui_new_button, ui_new_checkbox, ui_new_color_picker, ui_new_combobox, ui_new_multiselect, pairs, error, globals_absoluteframetime, json_stringify, math_cos, math_deg, math_floor, math_max, math_rad, math_sin, renderer_blur, renderer_circle, renderer_circle_outline, renderer_gradient, renderer_line, renderer_rectangle, renderer_world_to_screen, table_insert, table_sort, tostring, getmetatable, setmetatable, type, assert, ui_mouse_position, ui_reference, ui_set_callback, ui_set_visible, unpack, ui_new_slider, ui_new_label, vtable_bind, vtable_thunk, math_min = bit.band, client.color_log, client.delay_call, client.eye_position, client.key_state, client.log, client.screen_size, client.set_event_callback, client.unset_event_callback, client.userid_to_entindex, database.read, database.write, entity.get_local_player, entity.get_player_name, entity.get_player_weapon, entity.get_prop, entity.hitbox_position, entity.is_alive, globals.chokedcommands, globals.lastoutgoingcommand, globals.realtime, globals.tickcount, plist.get, renderer.measure_text, renderer.text, require, table.concat, table.remove, ui.get, ui.new_button, ui.new_checkbox, ui.new_color_picker, ui.new_combobox, ui.new_multiselect, pairs, error, globals.absoluteframetime, json.stringify, math.cos, math.deg, math.floor, math.max, math.rad, math.sin, renderer.blur, renderer.circle, renderer.circle_outline, renderer.gradient, renderer.line, renderer.rectangle, renderer.world_to_screen, table.insert, table.sort, tostring, getmetatable, setmetatable, type, assert, ui.mouse_position, ui.reference, ui.set_callback, ui.set_visible, unpack, ui.new_slider, ui.new_label, vtable_bind, vtable_thunk, math.min
 
 local ffi = require("ffi")
 local vector = require("vector")
@@ -140,6 +140,16 @@ local g_statistics_display =
         "draggable"
     }
 )
+
+local g_statistics_style = ui_new_combobox("lua", "b", "\nstatistics style", {"mini", "full sized"})
+
+local g_statistics_attach_while_scoped = ui_new_checkbox("lua", "b", "attach statistics while scoped")
+
+local g_statistics_offset_label_firstperson = ui_new_label("lua", "b", "offsets (first person)")
+local g_statistics_offset_x_firstperson, g_statistics_offset_y_firstperson = ui_new_slider("lua", "b", "\nstat_offset_x_fp", -200, 200, 0, false), ui_new_slider("lua", "b", "\nstat_offset_y_fp", -200, 200, 100, false)
+
+local g_statistics_offset_label_thirdperson = ui_new_label("lua", "b", "offsets (third person)")
+local g_statistics_offset_x_thirdperson, g_statistics_offset_y_thirdperson = ui_new_slider("lua", "b", "\nstat_offset_x_tp", -200, 200, 0, false), ui_new_slider("lua", "b", "\nstat_offset_y_tp", -200, 200, 100, false)
 
 local g_accent_color_picker = ui_new_color_picker("lua", "b", "accent color picker", 170, 0, 125, 255)
 
@@ -668,7 +678,6 @@ local g_aimbot_worker =
     return this
 end)()
 
-
 local g_container_manager = (function()
     local m_aimbot_data_ptr = g_aimbot_worker.get_database_ptr()
     local m_aimbot_dataset_processor = (function()
@@ -850,7 +859,7 @@ local g_container_manager = (function()
 
     local m_render_aim_data_ptr = m_aimbot_dataset_processor.get_data_ptr()
 
-    local m_render_engine = (function()local a={}local b=function(c,d,e,f,g,h,i,j,k)renderer_rectangle(c+g,d,e-g*2,g,h,i,j,k)renderer_rectangle(c,d+g,g,f-g*2,h,i,j,k)renderer_rectangle(c+g,d+f-g,e-g*2,g,h,i,j,k)renderer_rectangle(c+e-g,d+g,g,f-g*2,h,i,j,k)renderer_rectangle(c+g,d+g,e-g*2,f-g*2,h,i,j,k)renderer_circle(c+g,d+g,h,i,j,k,g,180,0.25)renderer_circle(c+e-g,d+g,h,i,j,k,g,90,0.25)renderer_circle(c+g,d+f-g,h,i,j,k,g,270,0.25)renderer_circle(c+e-g,d+f-g,h,i,j,k,g,0,0.25)end;local l=function(c,d,e,f,g,h,i,j,k)renderer_rectangle(c,d+g,1,f-g*2+2,h,i,j,k)renderer_rectangle(c+e-1,d+g,1,f-g*2+1,h,i,j,k)renderer_rectangle(c+g,d,e-g*2,1,h,i,j,k)renderer_rectangle(c+g,d+f,e-g*2,1,h,i,j,k)renderer_circle_outline(c+g,d+g,h,i,j,k,g,180,0.25,1)renderer_circle_outline(c+e-g,d+g,h,i,j,k,g,270,0.25,1)renderer_circle_outline(c+g,d+f-g+1,h,i,j,k,g,90,0.25,1)renderer_circle_outline(c+e-g,d+f-g+1,h,i,j,k,g,0,0.25,1)end;local m=8;local n=45;local o=15;local p=function(c,d,e,f,g,h,i,j,k,q)renderer_rectangle(c+g,d,e-g*2,1,h,i,j,k)renderer_circle_outline(c+g,d+g,h,i,j,k,g,180,0.25,1)renderer_circle_outline(c+e-g,d+g,h,i,j,k,g,270,0.25,1)renderer_gradient(c,d+g,1,f-g*2,h,i,j,k,h,i,j,n,false)renderer_gradient(c+e-1,d+g,1,f-g*2,h,i,j,k,h,i,j,n,false)renderer_circle_outline(c+g,d+f-g,h,i,j,n,g,90,0.25,1)renderer_circle_outline(c+e-g,d+f-g,h,i,j,n,g,0,0.25,1)renderer_rectangle(c+g,d+f-1,e-g*2,1,h,i,j,n)for r=1,q do l(c-r,d-r,e+r*2,f+r*2,g,h,i,j,q-r)end end;local s,t,u,v=17,17,17,200;a.render_container=function(c,d,e,f,h,i,j,k,w)renderer_blur(c,d,e,f,100,100)b(c,d,e,f,m,s,t,u,v)p(c,d,e,f,m,h,i,j,k,o)if w then w(c+m,d+m,e-m*2,f-m*2)end end;a.render_glow_line=function(c,d,x,y,h,i,j,k,z,A,B,q)local C=vector(c,d,0)local D=vector(x,y,0)local E=({C:to(D):angles()})[2]for r=1,q do renderer_circle_outline(c,d,z,A,B,q-r,r,E+90,0.5,1)renderer_circle_outline(x,y,z,A,B,q-r,r,E-90,0.5,1)local F=vector(math_cos(math_rad(E+90)),math_sin(math_rad(E+90)),0):scaled(r*0.95)local G=vector(math_cos(math_rad(E-90)),math_sin(math_rad(E-90)),0):scaled(r*0.95)local H=F+C;local I=F+D;local J=G+C;local K=G+D;renderer_line(H.x,H.y,I.x,I.y,z,A,B,q-r)renderer_line(J.x,J.y,K.x,K.y,z,A,B,q-r)end;renderer_line(c,d,x,y,h,i,j,k)end;return a end)()
+    local m_render_engine = (function()local a={}local b=function(c,d,e,f,g,h,i,j,k)renderer_rectangle(c+g,d,e-g*2,g,h,i,j,k)renderer_rectangle(c,d+g,g,f-g*2,h,i,j,k)renderer_rectangle(c+g,d+f-g,e-g*2,g,h,i,j,k)renderer_rectangle(c+e-g,d+g,g,f-g*2,h,i,j,k)renderer_rectangle(c+g,d+g,e-g*2,f-g*2,h,i,j,k)renderer_circle(c+g,d+g,h,i,j,k,g,180,0.25)renderer_circle(c+e-g,d+g,h,i,j,k,g,90,0.25)renderer_circle(c+g,d+f-g,h,i,j,k,g,270,0.25)renderer_circle(c+e-g,d+f-g,h,i,j,k,g,0,0.25)end;local l=function(c,d,e,f,g,h,i,j,k)renderer_rectangle(c,d+g,1,f-g*2+2,h,i,j,k)renderer_rectangle(c+e-1,d+g,1,f-g*2+1,h,i,j,k)renderer_rectangle(c+g,d,e-g*2,1,h,i,j,k)renderer_rectangle(c+g,d+f,e-g*2,1,h,i,j,k)renderer_circle_outline(c+g,d+g,h,i,j,k,g,180,0.25,1)renderer_circle_outline(c+e-g,d+g,h,i,j,k,g,270,0.25,1)renderer_circle_outline(c+g,d+f-g+1,h,i,j,k,g,90,0.25,1)renderer_circle_outline(c+e-g,d+f-g+1,h,i,j,k,g,0,0.25,1)end;local m=8;local n=45;local o=10;local p=function(c,d,e,f,g,h,i,j,k,q)renderer_rectangle(c+g,d,e-g*2,1,h,i,j,k)renderer_circle_outline(c+g,d+g,h,i,j,k,g,180,0.25,1)renderer_circle_outline(c+e-g,d+g,h,i,j,k,g,270,0.25,1)renderer_gradient(c,d+g,1,f-g*2,h,i,j,k,h,i,j,n,false)renderer_gradient(c+e-1,d+g,1,f-g*2,h,i,j,k,h,i,j,n,false)renderer_circle_outline(c+g,d+f-g,h,i,j,n,g,90,0.25,1)renderer_circle_outline(c+e-g,d+f-g,h,i,j,n,g,0,0.25,1)renderer_rectangle(c+g,d+f-1,e-g*2,1,h,i,j,n)for r=1,q do l(c-r,d-r,e+r*2,f+r*2,g,h,i,j,q-r)end end;local s,t,u,v=17,17,17,200;a.render_container=function(c,d,e,f,h,i,j,k,w)renderer_blur(c,d,e,f,100,100)b(c,d,e,f,m,s,t,u,v)p(c,d,e,f,m,h,i,j,k,o)if w then w(c+m,d+m,e-m*2,f-m*2)end end;a.render_glow_line=function(c,d,x,y,h,i,j,k,z,A,B,q)local C=vector(c,d,0)local D=vector(x,y,0)local E=({C:to(D):angles()})[2]for r=1,q do renderer_circle_outline(c,d,z,A,B,q-r,r,E+90,0.5,1)renderer_circle_outline(x,y,z,A,B,q-r,r,E-90,0.5,1)local F=vector(math_cos(math_rad(E+90)),math_sin(math_rad(E+90)),0):scaled(r*0.95)local G=vector(math_cos(math_rad(E-90)),math_sin(math_rad(E-90)),0):scaled(r*0.95)local H=F+C;local I=F+D;local J=G+C;local K=G+D;renderer_line(H.x,H.y,I.x,I.y,z,A,B,q-r)renderer_line(J.x,J.y,K.x,K.y,z,A,B,q-r)end;renderer_line(c,d,x,y,h,i,j,k)end;return a end)()
 
     local m_dpi_scale_reference = ui_reference("misc", "settings", "dpi scale")
 
@@ -862,20 +871,174 @@ local g_container_manager = (function()
         ["200%"] = 2
     }
 
-    local m_chart_colors = {
-        {0x4e, 0xa5, 0xd9},
-        {0x2a, 0x44, 0x94},
-        {0x44, 0xcf, 0xcb},
-        {0x22, 0x48, 0x70},
-        {0x12, 0x2c, 0x34}
-    }
-
-    local m_display_width, m_display_height = 300, 150
-    local m_last_width, m_last_height = m_display_width, m_display_height
-
     local m_round_number = function(v)
         return math_floor(v + 0.5)
     end
+
+    local m_display_sizes = {
+        ["mini"] = (function() 
+            local m_container_callback_function = function(x, y, w, h)
+                local current_dpi_scale = m_scaling_multipliers[ui_get(m_dpi_scale_reference)]
+                local r, g, b = ui_get(g_accent_color_picker)
+
+                local total_accuracy = m_render_aim_data_ptr.m_total_accuracy_rate
+
+                renderer_text(m_round_number(x + w * 0.5), y, 255, 255, 255, 200, "dc-", 0, ("ACCURACY %.1f%%"):format(total_accuracy * 100))
+
+                local bar_width = m_round_number(4 * current_dpi_scale); local inner_bar_width = bar_width - 2
+
+                renderer_rectangle(m_round_number(x + w * 0.01), m_round_number(y + h * 0.1), bar_width, m_round_number(h * 0.9), 17, 17, 17, 255)
+                renderer_rectangle(m_round_number(x + w * 0.01 + 1), m_round_number(m_round_number(y + h * 0.1) + 1 + h * 0.9 * (1 - total_accuracy)), inner_bar_width, m_round_number((h * 0.9 - 2) * total_accuracy), r, g, b, 200)
+                renderer_rectangle(m_round_number(x + w * 0.01), m_round_number(m_round_number(y + h * 0.1) + 1 + h * 0.9 * (1 - total_accuracy)), bar_width, m_round_number(1 * current_dpi_scale), r, g, b, 255)
+
+                do
+                    local x, y, w, h = x + w * 0.15, y + h * 0.1, w * 0.85, h * 0.9
+                    
+                    local m_rendered_strings = {
+                        { "HEAD:", ( "%.1f%%" ):format( m_render_aim_data_ptr.m_accuracy_by_spec.head * 100 ) },
+                        { "BODY:", ( "%.1f%%" ):format( m_render_aim_data_ptr.m_accuracy_by_spec.body * 100 ) },
+                        { "SP:", ( "%.1f%%" ):format( m_render_aim_data_ptr.m_accuracy_by_spec.sp * 100 ) },
+                        { "MOST MISSES", ( "%s" ):format( m_render_aim_data_ptr.m_miss_reasons[1].m_full_name ) }
+                    }
+
+                    local allowed_slice = h * 0.25
+                    
+                    for i = 1, 4 do
+                        local left, right = unpack(m_rendered_strings[i])
+
+                        renderer_text(m_round_number(x), m_round_number(y + allowed_slice * (i - 1)), 255, 255, 255, 200, "d-", 0, left)
+                        renderer_text(m_round_number(x + w * 0.95), m_round_number(y + allowed_slice * (i - 1)), 255, 255, 255, 200, "dr-", 0, right)
+                    end
+                end
+            end
+
+            return { m_display_width = 120, m_display_height = 65, m_last_width = 120, m_last_height = 65, m_container_callback = m_container_callback_function } 
+        end)(),
+        ["full sized"] = (function()
+            local m_chart_colors = {
+                {0x4e, 0xa5, 0xd9},
+                {0x2a, 0x44, 0x94},
+                {0x44, 0xcf, 0xcb},
+                {0x22, 0x48, 0x70},
+                {0x12, 0x2c, 0x34}
+            }
+
+            local m_container_callback_function = function(x, y, w, h)
+                local current_dpi_scale = m_scaling_multipliers[ui_get(m_dpi_scale_reference)]
+                local r, g, b = ui_get(g_accent_color_picker)
+        
+                renderer_text(x + w * 0.5, y, 255, 255, 255, 200, "cd-", 0, "AIMBOT STATS")
+                local text_size_y = ({ renderer_measure_text("d-", "AIMBOT STATS") })[2]
+        
+                renderer_text(x + w * 0.5, y + text_size_y, 255, 255, 255, 200, "cd-", 0, "TOTAL ACCURACY%")
+        
+                renderer_rectangle(m_round_number(x + w * 0.05), m_round_number(y + 16 * current_dpi_scale), m_round_number(w * 0.9), m_round_number(7 * current_dpi_scale), 17, 17, 17, 225)
+                renderer_rectangle(m_round_number(x + w * 0.05 + 1), m_round_number(y + 17 * current_dpi_scale), m_round_number((w * 0.9 - 1) * m_render_aim_data_ptr.m_total_accuracy_rate), m_round_number(5 * current_dpi_scale), r, g, b, 255)
+                renderer_rectangle(m_round_number(x + w * 0.05 + 1 + (w * 0.9 - 1) * m_render_aim_data_ptr.m_total_accuracy_rate), m_round_number(y + 16 * current_dpi_scale), 1, m_round_number(7 * current_dpi_scale), r, g, b, 255)
+                renderer_text(m_round_number(x + w * 0.05 + 1 + (w * 0.9 - 1) * m_render_aim_data_ptr.m_total_accuracy_rate), m_round_number(y + 23 * current_dpi_scale), 255, 255, 255, 200, "cd-", 0, ("%d%%"):format(m_render_aim_data_ptr.m_total_accuracy_rate * 100))
+        
+                do
+                    local left_bound_x, right_bound_x = x + w * 0.05, x + w * 0.55
+        
+                    local y = y + 27 * current_dpi_scale
+                    local w = w * 0.4
+                    local h = h - 27 * current_dpi_scale
+        
+                    do -- left
+                        local x = left_bound_x
+        
+                        local accuracy_by_spec = m_render_aim_data_ptr.m_accuracy_by_spec
+        
+                        renderer_text(m_round_number(x), m_round_number(y), 255, 255, 255, 200, "d-", 0,
+                            "HEAD: \nBODY: \nLIMBS: \nSP: \nLETHAL SHOT: "
+                        )
+        
+                        local accuracy_str = ("%.1f%%\n%.1f%%\n%.1f%%\n%.1f%%\n%.1f%%"):format(
+                            accuracy_by_spec.head * 100,
+                            accuracy_by_spec.body * 100,
+                            accuracy_by_spec.limbs * 100,
+                            accuracy_by_spec.sp * 100,
+                            accuracy_by_spec.lethal * 100
+                        )
+        
+                        renderer_text(m_round_number(x + w * 0.95), m_round_number(y), 255, 255, 255, 200, "dr-", 0, accuracy_str)
+        
+                        local measurement_x = renderer_measure_text("d-", accuracy_str)
+        
+                        local y = y + h * 0.6
+        
+                        renderer_text(m_round_number(x), m_round_number(y), 255, 255, 255, 200, "d-", 0, "TOTAL SHOTS: \nTOTAL KILLS: \nTOTAL HS: \nTOTAL ZEUSES: ")
+                        renderer_text(m_round_number(x + w * 0.95 - measurement_x), y, 255, 255, 255, 200, "d-", 0, ("%d\n%d\n%d\n%d"):format(m_render_aim_data_ptr.m_total_shots, m_render_aim_data_ptr.m_total_kills, m_render_aim_data_ptr.m_total_headshots, m_render_aim_data_ptr.m_total_zeus) )
+                    end
+        
+                    do -- right
+                        local x = right_bound_x
+                        local target_circle_radius = h * 0.2
+        
+                        renderer_text(m_round_number(x + w * 0.5 - renderer_measure_text("d-", "MISS CHART:") * 0.5), m_round_number(y), 255, 255, 255, 200, "d-", 0, "MISS CHART:")
+        
+                        local circle_center_x, circle_center_y = m_round_number(x + w * 0.5), m_round_number(y + target_circle_radius + 14 * current_dpi_scale)
+                        renderer_circle(circle_center_x, circle_center_y, 17, 17, 17, 225, m_round_number(target_circle_radius), 0, 1)
+        
+                        local ang_start = 270
+                        local miss_reasons = m_render_aim_data_ptr.m_miss_reasons
+                        
+                        local pie_chart_text_positions = {} -- prevent text clipping
+                        local pie_chart_text_position_it = 1
+        
+                        for i = 1, #miss_reasons do
+                            local t = miss_reasons[i]
+        
+                            local frac = t.m_percentage
+        
+                            if t.m_count == 0 then
+                              goto continue
+                            end
+        
+                            local r, g, b = unpack(m_chart_colors[i])
+                            renderer_circle_outline(circle_center_x, circle_center_y, r, g, b, 225, m_round_number(target_circle_radius - 1), ang_start, t.m_percentage, m_round_number(25 * current_dpi_scale - 1))
+                            
+                            if frac > 0.05 then
+                                local ang = math_rad(ang_start) + (2 * math.pi * frac * 0.5)
+                                local position_x, position_y = circle_center_x + math_cos(ang) * target_circle_radius * 0.6, circle_center_y + math_sin(ang) * target_circle_radius * 0.6
+        
+                                pie_chart_text_positions[pie_chart_text_position_it] = {
+                                    m_name = t.m_name,
+                                    m_frac = frac * 100,
+        
+                                    x = position_x,
+                                    y = position_y
+                                }
+        
+                                pie_chart_text_position_it = pie_chart_text_position_it + 1
+                            end
+        
+                            ang_start = ang_start + math_deg((2 * math.pi * t.m_percentage))
+                            ::continue::
+                        end
+        
+                        for i = 1, #pie_chart_text_positions do
+                            local v = pie_chart_text_positions[i]
+        
+                            renderer_text(m_round_number(v.x), m_round_number(v.y), 255, 255, 255, 225, (current_dpi_scale == 1 and "c-" or "c"), 0, 
+                                ("%s (%d%%)"):format(v.m_name, v.m_frac)
+                            )
+                        end
+        
+                        local y = y + h * 0.6
+        
+                        renderer_text(m_round_number(x), m_round_number(y), 255, 255, 255, 200, "d-", 0, "MOST COMMON: \nAVG HC: \nAVG SPREAD: \nAVG SHOTS/KILL: ")
+                        renderer_text(m_round_number(x + w * 0.95), m_round_number(y), 255, 255, 255, 200, "dr-", 0, 
+                            ("%s\n%.1f%%\n%.2f°\n%.2f"):format(miss_reasons[1].m_full_name, m_render_aim_data_ptr.m_average_hc, m_render_aim_data_ptr.m_average_spread, m_render_aim_data_ptr.m_average_shots_per_kill)
+                        )
+        
+                    end
+                end
+            end
+
+            return { m_display_width = 300, m_display_height = 150, m_last_width = 300, m_last_height = 150, m_container_callback = m_container_callback_function } 
+        end)()
+    }
 
     local m_render_position_funcs = {
         ["-"] = function() end,
@@ -893,11 +1056,8 @@ local g_container_manager = (function()
 
             local m_thirdperson_reference, m_thirdperson_key_reference = ui_reference("visuals", "effects", "force third person (alive)")
 
-            local m_offset_x_firstperson, m_offset_y_firstperson = 100, -175
-            local m_offset_x_thirdperson, m_offset_y_thirdperson = 45, -75
-
             local m_get_muzzle_position = function(me)
-                if entity_get_prop(me, "m_bIsScoped") == 1 then
+                if entity_get_prop(me, "m_bIsScoped") == 1 and not ui_get(g_statistics_attach_while_scoped) then
                     return false
                 end
 
@@ -923,7 +1083,13 @@ local g_container_manager = (function()
 
             end
 
+            local m_inversion_progress = 0 
+            -- I know I should use easing for this
+            -- however, I will not
+
             return function()
+                local current_display_size = m_display_sizes[ui_get(g_statistics_style)]
+
                 if m_inbetweening_worker then
                     m_inbetweening_worker:update(globals_absoluteframetime() * 1.5)
                 end
@@ -954,6 +1120,7 @@ local g_container_manager = (function()
                 local position_target = m_default_position
                 local should_draw_glowline = false
 
+                local should_invert = false
 
                 if world_origin_position then
                     should_draw_glowline = true
@@ -961,7 +1128,18 @@ local g_container_manager = (function()
                     local w2s_x, w2s_y = renderer_world_to_screen(world_origin_position:unpack())
 
                     if w2s_x and w2s_y then
+                        local m_offset_x_firstperson, m_offset_y_firstperson = ui_get(g_statistics_offset_x_firstperson), ui_get(g_statistics_offset_y_firstperson) * -1
+                        local m_offset_x_thirdperson, m_offset_y_thirdperson = ui_get(g_statistics_offset_x_thirdperson), ui_get(g_statistics_offset_y_thirdperson) * -1
+
                         local render_offset_x, render_offset_y = unpack((is_third_person and { m_offset_x_thirdperson, m_offset_y_thirdperson } or { m_offset_x_firstperson, m_offset_y_firstperson }))
+
+                        should_invert = m_xy[1] < w2s_x
+
+                        if should_invert then
+                            m_inversion_progress = math_min(1, m_inversion_progress + globals_absoluteframetime() * 6)
+                        else
+                            m_inversion_progress = math_max(0, m_inversion_progress - globals_absoluteframetime() * 6)
+                        end
 
                         local current_scale = m_scaling_multipliers[ui_get(m_dpi_scale_reference)]
                         render_offset_x, render_offset_y = render_offset_x * current_scale, render_offset_y * current_scale
@@ -978,7 +1156,7 @@ local g_container_manager = (function()
                     m_render_engine.render_glow_line(start_position_x, start_position_y, m_xy[1], m_xy[2], 255, 255, 255, 45, r, g, b, 8)
                 end
 
-                return m_xy[1], m_xy[2] - m_last_height * 0.5
+                return m_xy[1] - current_display_size.m_last_width * m_inversion_progress, m_xy[2] - current_display_size.m_last_height * 0.5
             end
         end)(),
 
@@ -991,7 +1169,9 @@ local g_container_manager = (function()
                 local mouse_down = client_key_state(1)
                 local mouse_x, mouse_y = ui_mouse_position()
 
-                local can_drag = mouse_down and not m_dragging and mouse_x > render_table_ptr.m_draggable_position_x and mouse_x < render_table_ptr.m_draggable_position_x + m_last_width and mouse_y > render_table_ptr.m_draggable_position_y and mouse_y < render_table_ptr.m_draggable_position_y + m_last_height
+                local display_sizes = m_display_sizes[ui_get(g_statistics_style)]
+
+                local can_drag = mouse_down and not m_dragging and mouse_x > render_table_ptr.m_draggable_position_x and mouse_x < render_table_ptr.m_draggable_position_x + display_sizes.m_last_width and mouse_y > render_table_ptr.m_draggable_position_y and mouse_y < render_table_ptr.m_draggable_position_y + display_sizes.m_last_height
 
                 -- i know this drag is shit and doesn't account for overlapping objects
                 -- HOWEVER, i do not give a shit and cia operatives will taste the wrath of Allah
@@ -1011,130 +1191,19 @@ local g_container_manager = (function()
         end)()
     }
 
-    local m_container_callback_function = function(x, y, w, h)
-        local current_dpi_scale = m_scaling_multipliers[ui_get(m_dpi_scale_reference)]
-        local r, g, b = ui_get(g_accent_color_picker)
-
-        renderer_text(x + w * 0.5, y, 255, 255, 255, 200, "cd-", 0, "AIMBOT STATS")
-        local text_size_y = ({ renderer_measure_text("d-", "AIMBOT STATS") })[2]
-
-        renderer_text(x + w * 0.5, y + text_size_y, 255, 255, 255, 200, "cd-", 0, "TOTAL ACCURACY%")
-
-        renderer_rectangle(m_round_number(x + w * 0.05), m_round_number(y + 16 * current_dpi_scale), m_round_number(w * 0.9), m_round_number(7 * current_dpi_scale), 17, 17, 17, 225)
-        renderer_rectangle(m_round_number(x + w * 0.05 + 1), m_round_number(y + 17 * current_dpi_scale), m_round_number((w * 0.9 - 1) * m_render_aim_data_ptr.m_total_accuracy_rate), m_round_number(5 * current_dpi_scale), r, g, b, 255)
-        renderer_rectangle(m_round_number(x + w * 0.05 + 1 + (w * 0.9 - 1) * m_render_aim_data_ptr.m_total_accuracy_rate), m_round_number(y + 16 * current_dpi_scale), 1, m_round_number(7 * current_dpi_scale), r, g, b, 255)
-        renderer_text(m_round_number(x + w * 0.05 + 1 + (w * 0.9 - 1) * m_render_aim_data_ptr.m_total_accuracy_rate), m_round_number(y + 23 * current_dpi_scale), 255, 255, 255, 200, "cd-", 0, ("%d%%"):format(m_render_aim_data_ptr.m_total_accuracy_rate * 100))
-
-        do
-            local left_bound_x, right_bound_x = x + w * 0.05, x + w * 0.55
-
-            local y = y + 27 * current_dpi_scale
-            local w = w * 0.4
-            local h = h - 27 * current_dpi_scale
-
-            do -- left
-                local x = left_bound_x
-
-                local accuracy_by_spec = m_render_aim_data_ptr.m_accuracy_by_spec
-
-                renderer_text(m_round_number(x), m_round_number(y), 255, 255, 255, 200, "d-", 0,
-                    "HEAD: \nBODY: \nLIMBS: \nSP: \nLETHAL SHOT: "
-                )
-
-                local accuracy_str = ("%.1f%%\n%.1f%%\n%.1f%%\n%.1f%%\n%.1f%%"):format(
-                    accuracy_by_spec.head * 100,
-                    accuracy_by_spec.body * 100,
-                    accuracy_by_spec.limbs * 100,
-                    accuracy_by_spec.sp * 100,
-                    accuracy_by_spec.lethal * 100
-                )
-
-                renderer_text(m_round_number(x + w * 0.95), m_round_number(y), 255, 255, 255, 200, "dr-", 0, accuracy_str)
-
-                local measurement_x = renderer_measure_text("d-", accuracy_str)
-
-                local y = y + h * 0.6
-
-                renderer_text(m_round_number(x), m_round_number(y), 255, 255, 255, 200, "d-", 0, "TOTAL SHOTS: \nTOTAL KILLS: \nTOTAL HS: \nTOTAL ZEUSES: ")
-                renderer_text(m_round_number(x + w * 0.95 - measurement_x), y, 255, 255, 255, 200, "d-", 0, ("%d\n%d\n%d\n%d"):format(m_render_aim_data_ptr.m_total_shots, m_render_aim_data_ptr.m_total_kills, m_render_aim_data_ptr.m_total_headshots, m_render_aim_data_ptr.m_total_zeus) )
-            end
-
-            do -- right
-                local x = right_bound_x
-                local target_circle_radius = h * 0.2
-
-                renderer_text(m_round_number(x + w * 0.5 - renderer_measure_text("d-", "MISS CHART:") * 0.5), m_round_number(y), 255, 255, 255, 200, "d-", 0, "MISS CHART:")
-
-                local circle_center_x, circle_center_y = m_round_number(x + w * 0.5), m_round_number(y + target_circle_radius + 14 * current_dpi_scale)
-                renderer_circle(circle_center_x, circle_center_y, 17, 17, 17, 225, m_round_number(target_circle_radius), 0, 1)
-
-                local ang_start = 270
-                local miss_reasons = m_render_aim_data_ptr.m_miss_reasons
-                
-                local pie_chart_text_positions = {} -- prevent text clipping
-                local pie_chart_text_position_it = 1
-
-                for i = 1, #miss_reasons do
-                    local t = miss_reasons[i]
-
-                    local frac = t.m_percentage
-
-                    if t.m_count == 0 then
-                      goto continue
-                    end
-
-                    local r, g, b = unpack(m_chart_colors[i])
-                    renderer_circle_outline(circle_center_x, circle_center_y, r, g, b, 225, m_round_number(target_circle_radius - 1), ang_start, t.m_percentage, m_round_number(25 * current_dpi_scale - 1))
-                    
-                    if frac > 0.05 then
-                        local ang = math_rad(ang_start) + (2 * math.pi * frac * 0.5)
-                        local position_x, position_y = circle_center_x + math_cos(ang) * target_circle_radius * 0.6, circle_center_y + math_sin(ang) * target_circle_radius * 0.6
-
-                        pie_chart_text_positions[pie_chart_text_position_it] = {
-                            m_name = t.m_name,
-                            m_frac = frac * 100,
-
-                            x = position_x,
-                            y = position_y
-                        }
-
-                        pie_chart_text_position_it = pie_chart_text_position_it + 1
-                    end
-
-                    ang_start = ang_start + math_deg((2 * math.pi * t.m_percentage))
-                    ::continue::
-                end
-
-                for i = 1, #pie_chart_text_positions do
-                    local v = pie_chart_text_positions[i]
-
-                    renderer_text(m_round_number(v.x), m_round_number(v.y), 255, 255, 255, 225, (current_dpi_scale == 1 and "c-" or "c"), 0, 
-                        ("%s (%d%%)"):format(v.m_name, v.m_frac)
-                    )
-                end
-
-                local y = y + h * 0.6
-
-                renderer_text(m_round_number(x), m_round_number(y), 255, 255, 255, 200, "d-", 0, "MOST COMMON: \nAVG HC: \nAVG SPREAD: \nAVG SHOTS/KILL: ")
-                renderer_text(m_round_number(x + w * 0.95), m_round_number(y), 255, 255, 255, 200, "dr-", 0, 
-                    ("%s\n%.1f%%\n%.2f°\n%.2f"):format(miss_reasons[1].m_full_name, m_render_aim_data_ptr.m_average_hc, m_render_aim_data_ptr.m_average_spread, m_render_aim_data_ptr.m_average_shots_per_kill)
-                )
-
-            end
-        end
-    end
-
     local m_draw_container = function(x, y)
         local r, g, b = ui_get(g_accent_color_picker)
 
+        local display_mode = m_display_sizes[ui_get(g_statistics_style)]
+
         local scaling_multiplier = m_scaling_multipliers[ui_get(m_dpi_scale_reference)]
 
-        local w, h = m_display_width * scaling_multiplier, m_display_height * scaling_multiplier
+        local w, h = display_mode.m_display_width * scaling_multiplier, display_mode.m_display_height * scaling_multiplier
 
-        m_last_width, m_last_height = w, h
+        display_mode.m_last_width, display_mode.m_last_height = w, h
 
         m_render_engine.render_container(
-            m_round_number(x), m_round_number(y), m_round_number(w), m_round_number(h), r, g, b, 255, m_container_callback_function
+            m_round_number(x), m_round_number(y), m_round_number(w), m_round_number(h), r, g, b, 255, display_mode.m_container_callback
         )
     end
 
@@ -1409,13 +1478,36 @@ local g_paint_callback = function()
     g_log_worker.on_paint()
 end
 
+local g_handle_visibility = function()
+    local is_enabled = ui_get(g_master_switch) -- not always called from g_ui_callback
+
+    ui_set_visible(g_event_logger, is_enabled)
+
+    local statistics_display_selection = ui_get(g_statistics_display)
+
+    ui_set_visible(g_statistics_display, is_enabled)
+    ui_set_visible(g_statistics_style, is_enabled and statistics_display_selection ~= "-")
+
+    local is_attached_to_player = statistics_display_selection == "attached to player"
+
+    ui_set_visible(g_statistics_attach_while_scoped, is_enabled and is_attached_to_player)
+
+    ui_set_visible(g_statistics_offset_label_firstperson, is_enabled and is_attached_to_player)
+    ui_set_visible(g_statistics_offset_x_firstperson, is_enabled and is_attached_to_player)
+    ui_set_visible(g_statistics_offset_y_firstperson, is_enabled and is_attached_to_player)
+
+    ui_set_visible(g_statistics_offset_label_thirdperson, is_enabled and is_attached_to_player)
+    ui_set_visible(g_statistics_offset_x_thirdperson, is_enabled and is_attached_to_player)
+    ui_set_visible(g_statistics_offset_y_thirdperson, is_enabled and is_attached_to_player)
+
+    ui_set_visible(g_accent_color_picker, is_enabled)
+    ui_set_visible(g_erase_statistics, is_enabled)
+end
+
 local g_ui_callback = function()
     local is_enabled = ui_get(g_master_switch)
 
-    ui_set_visible(g_event_logger, is_enabled)
-    ui_set_visible(g_statistics_display, is_enabled)
-    ui_set_visible(g_accent_color_picker, is_enabled)
-    ui_set_visible(g_erase_statistics, is_enabled)
+    g_handle_visibility()
 
     local fn = is_enabled and client_set_event_callback or client_unset_event_callback
 
@@ -1426,6 +1518,22 @@ local g_ui_callback = function()
     fn("bullet_impact", g_aimbot_worker.on_bullet_impact)
     fn("console_input", g_console_manager.on_console_input)
     fn("paint", g_paint_callback)
+end
+
+for k, v in pairs({
+    g_event_logger,
+    g_statistics_display,
+    g_statistics_style,
+
+    g_statistics_attach_while_scoped,
+
+    g_statistics_offset_label_firstperson,
+    g_statistics_offset_x_firstperson,
+    g_statistics_offset_y_firstperson,
+
+    g_accent_color_picker
+}) do
+    ui_set_callback(v, g_handle_visibility)
 end
 
 g_ui_callback()
