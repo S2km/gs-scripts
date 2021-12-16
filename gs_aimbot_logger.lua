@@ -1156,7 +1156,7 @@ local g_container_manager = (function()
                     m_render_engine.render_glow_line(start_position_x, start_position_y, m_xy[1], m_xy[2], 255, 255, 255, 45, r, g, b, 8)
                 end
 
-                return m_xy[1] - current_display_size.m_last_width * m_inversion_progress, m_xy[2] - current_display_size.m_last_height * 0.5
+                return (should_draw_glowline and m_xy[1] - current_display_size.m_last_width * m_inversion_progress or m_xy[1]), m_xy[2] - current_display_size.m_last_height * 0.5
             end
         end)(),
 
