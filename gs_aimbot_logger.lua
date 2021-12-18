@@ -12,9 +12,7 @@ local G_SCRIPT_VERSION = "v1.0.1" -- used to recreate database
 
 local g_database_accessor =
     (function()
-    local m_table = {}
-    local m_default_table = {}
-    local m_db_key = ""
+    local m_table, m_default_table, m_db_key = {}, {}, ""
 
     local m_set_default_table = function(t)
         m_default_table = t
@@ -22,10 +20,6 @@ local g_database_accessor =
 
     local m_set_db_key = function(key)
         m_db_key = key
-    end
-
-    local m_write_table = function()
-        database_write(m_db_key, m_table)
     end
 
     local m_read_table = function()
@@ -42,25 +36,17 @@ local g_database_accessor =
         client_delay_call(0.05, client.reload_active_scripts)
     end
 
-    local this = {}
+    client_set_event_callback("shutdown", function() database_write(m_db_key, m_table) end)
 
-    this.m_set_default_table = m_set_default_table
-    this.m_set_db_key = m_set_db_key
-    this.m_write_table = m_write_table
-    this.m_read_table = m_read_table
-    this.m_erase_data = m_erase_data
-
-    client_set_event_callback(
-        "shutdown",
-        function()
-            database_write(m_db_key, m_table)
-        end
-    )
-
-    return this
+    return {
+        set_default_table = m_set_default_table,
+        set_db_key = m_set_db_key,
+        read_table = m_read_table,
+        erase_data = m_erase_data
+    }
 end)()
 
-g_database_accessor.m_set_default_table({
+g_database_accessor.set_default_table({
         m_total_fired_shots = 0, m_total_fired_sp_shots = 0, m_total_lethal_shots = 0, m_total_kills = 0, m_total_zeus_kills = 0,
         m_fired_shots_by_hitbox = { head = 0, body = 0, limbs = 0 }, m_sp_fired_shots_by_hitbox = { head = 0, body = 0, limbs = 0},
         m_hits = {
@@ -97,7 +83,7 @@ g_database_accessor.m_set_default_table({
     }
 )
 
-g_database_accessor.m_set_db_key(("gs-shot-data-stats-%s"):format(G_SCRIPT_VERSION))
+g_database_accessor.set_db_key(("gs-shot-data-stats-%s"):format(G_SCRIPT_VERSION))
 
 local g_master_switch = ui_new_checkbox("lua", "b", "[+] aimbot shot collector")
 
@@ -117,7 +103,7 @@ local g_statistics_offset_x_thirdperson, g_statistics_offset_y_thirdperson = ui_
 
 local g_accent_color_picker = ui_new_color_picker("lua", "b", "accent color picker", 170, 0, 125, 255)
 
-local g_erase_statistics = ui_new_button("lua", "b", "erase shot stats", g_database_accessor.m_erase_data)
+local g_erase_statistics = ui_new_button("lua", "b", "erase shot stats", g_database_accessor.erase_data)
 
 local g_log_worker = (function()
     local m_contains = function(t, val)
@@ -241,7 +227,7 @@ end)()
 
 local g_aimbot_worker =
     (function()
-    local g_aimbot_history_table = g_database_accessor.m_read_table()
+    local g_aimbot_history_table = g_database_accessor.read_table()
 
     local m_aimbot_shot_tracklist, m_bullet_impact_tracklist = {}, {}
 
@@ -1227,7 +1213,7 @@ local g_console_manager = (function()
         ["clear_data"] = function()
             client_log("[logger] erasing data...")
 
-            g_database_accessor.m_erase_data()
+            g_database_accessor.erase_data()
         end,
 
         ["json"] = function()
