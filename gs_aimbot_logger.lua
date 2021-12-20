@@ -1,5 +1,5 @@
 -- local variables for API functions. any changes to the line below will be lost on re-generation
-local bit_band, client_color_log, client_delay_call, client_eye_position, client_key_state, client_log, client_screen_size, client_set_event_callback, client_unset_event_callback, client_userid_to_entindex, database_read, database_write, entity_get_local_player, entity_get_player_name, entity_get_player_weapon, entity_get_prop, entity_hitbox_position, entity_is_alive, globals_chokedcommands, globals_lastoutgoingcommand, globals_realtime, globals_tickcount, plist_get, renderer_measure_text, renderer_text, require, table_concat, table_remove, ui_get, ui_new_button, ui_new_checkbox, ui_new_color_picker, ui_new_combobox, ui_new_multiselect, pairs, error, globals_absoluteframetime, json_stringify, math_cos, math_deg, math_floor, math_max, math_rad, math_sin, renderer_blur, renderer_circle, renderer_circle_outline, renderer_gradient, renderer_line, renderer_rectangle, renderer_world_to_screen, table_insert, table_sort, tostring, getmetatable, setmetatable, type, assert, ui_mouse_position, ui_reference, ui_set_callback, ui_set_visible, unpack, ui_new_slider, ui_new_label, vtable_bind, vtable_thunk, math_min = bit.band, client.color_log, client.delay_call, client.eye_position, client.key_state, client.log, client.screen_size, client.set_event_callback, client.unset_event_callback, client.userid_to_entindex, database.read, database.write, entity.get_local_player, entity.get_player_name, entity.get_player_weapon, entity.get_prop, entity.hitbox_position, entity.is_alive, globals.chokedcommands, globals.lastoutgoingcommand, globals.realtime, globals.tickcount, plist.get, renderer.measure_text, renderer.text, require, table.concat, table.remove, ui.get, ui.new_button, ui.new_checkbox, ui.new_color_picker, ui.new_combobox, ui.new_multiselect, pairs, error, globals.absoluteframetime, json.stringify, math.cos, math.deg, math.floor, math.max, math.rad, math.sin, renderer.blur, renderer.circle, renderer.circle_outline, renderer.gradient, renderer.line, renderer.rectangle, renderer.world_to_screen, table.insert, table.sort, tostring, getmetatable, setmetatable, type, assert, ui.mouse_position, ui.reference, ui.set_callback, ui.set_visible, unpack, ui.new_slider, ui.new_label, vtable_bind, vtable_thunk, math.min
+local bit_band, client_color_log, client_delay_call, client_eye_position, client_key_state, client_log, client_screen_size, client_set_event_callback, client_unset_event_callback, client_userid_to_entindex, database_read, database_write, entity_get_local_player, entity_get_player_name, entity_get_player_weapon, entity_get_prop, entity_hitbox_position, entity_is_alive, globals_chokedcommands, globals_lastoutgoingcommand, globals_realtime, globals_tickcount, plist_get, renderer_measure_text, renderer_text, require, table_concat, table_remove, ui_get, ui_new_button, ui_new_checkbox, ui_new_color_picker, ui_new_combobox, ui_new_multiselect, pairs, error, globals_absoluteframetime, json_stringify, math_cos, math_deg, math_floor, math_max, math_rad, math_sin, renderer_blur, renderer_circle, renderer_circle_outline, renderer_gradient, renderer_line, renderer_rectangle, renderer_world_to_screen, table_insert, table_sort, tostring, getmetatable, setmetatable, type, assert, ui_mouse_position, ui_reference, ui_set_callback, ui_set_visible, unpack, ui_new_slider, ui_new_label, vtable_bind, vtable_thunk, math_min, math_abs = bit.band, client.color_log, client.delay_call, client.eye_position, client.key_state, client.log, client.screen_size, client.set_event_callback, client.unset_event_callback, client.userid_to_entindex, database.read, database.write, entity.get_local_player, entity.get_player_name, entity.get_player_weapon, entity.get_prop, entity.hitbox_position, entity.is_alive, globals.chokedcommands, globals.lastoutgoingcommand, globals.realtime, globals.tickcount, plist.get, renderer.measure_text, renderer.text, require, table.concat, table.remove, ui.get, ui.new_button, ui.new_checkbox, ui.new_color_picker, ui.new_combobox, ui.new_multiselect, pairs, error, globals.absoluteframetime, json.stringify, math.cos, math.deg, math.floor, math.max, math.rad, math.sin, renderer.blur, renderer.circle, renderer.circle_outline, renderer.gradient, renderer.line, renderer.rectangle, renderer.world_to_screen, table.insert, table.sort, tostring, getmetatable, setmetatable, type, assert, ui.mouse_position, ui.reference, ui.set_callback, ui.set_visible, unpack, ui.new_slider, ui.new_label, vtable_bind, vtable_thunk, math.min, math.abs
 
 local ffi = require("ffi")
 local vector = require("vector")
@@ -32,18 +32,13 @@ local g_database_accessor =
     local m_erase_data = function()
         database_write(m_db_key, nil)
         m_table = m_default_table
-        
+
         client_delay_call(0.05, client.reload_active_scripts)
     end
 
     client_set_event_callback("shutdown", function() database_write(m_db_key, m_table) end)
 
-    return {
-        set_default_table = m_set_default_table,
-        set_db_key = m_set_db_key,
-        read_table = m_read_table,
-        erase_data = m_erase_data
-    }
+    return { set_default_table = m_set_default_table, set_db_key = m_set_db_key, read_table = m_read_table, erase_data = m_erase_data }
 end)()
 
 g_database_accessor.set_default_table({
@@ -195,7 +190,7 @@ local g_log_worker = (function()
         if #m_log_track_list == 0 then
             return
         end
-        
+
         local time = globals_realtime()
         local screen_width, screen_height = client_screen_size()
         local render_position_x, render_position_y = screen_width * 0.5, screen_height * 0.15
@@ -216,7 +211,7 @@ local g_log_worker = (function()
             local alpha = is_fading_away and time_delta * 100 or 255
 
             local str = rec.m_string:gsub("\a(%x%x)(%x%x)(%x%x)(%x%x)", ("\a%%1%%2%%3%02x"):format(alpha))
-            
+
             renderer_text(render_position_x * position_x_offset, render_position_y * position_y_offset, 255, 255, 255, alpha, "dc", 0, str)
             render_position_y = render_position_y - ({ renderer_measure_text("d", str) })[2] - 3
         end
@@ -231,7 +226,7 @@ local g_aimbot_worker =
 
     local m_aimbot_shot_tracklist, m_bullet_impact_tracklist = {}, {}
 
-    local g_safepoint_reference, g_avoid_unsafe_hitboxes_reference, g_mindamage_reference, g_fbaim_reference = ui_reference("rage", "aimbot", "force safe point"), ui_reference("rage", "aimbot", "avoid unsafe hitboxes"), ui_reference("rage", "aimbot", "minimum damage"), 
+    local g_safepoint_reference, g_avoid_unsafe_hitboxes_reference, g_mindamage_reference, g_fbaim_reference = ui_reference("rage", "aimbot", "force safe point"), ui_reference("rage", "aimbot", "avoid unsafe hitboxes"), ui_reference("rage", "aimbot", "minimum damage"),
         ui_reference("rage", "other", "force body aim")
 
     local m_helpers = (function()
@@ -273,8 +268,8 @@ local g_aimbot_worker =
             end)() -- i hate goto i hate goto
         end
 
-        this.is_forcing_bodyaim = function(entity_index) 
-            return plist_get(entity_index, "Override prefer body aim") == "Force" or ui_get(g_fbaim_reference) 
+        this.is_forcing_bodyaim = function(entity_index)
+            return plist_get(entity_index, "Override prefer body aim") == "Force" or ui_get(g_fbaim_reference)
         end
 
         this.get_hitgroup_class = function(h)
@@ -306,8 +301,7 @@ local g_aimbot_worker =
         local shoot_pos = aim_data.m_aim_pos
 
         local ideal_dir = vector(shoot_pos:to(aim_data.m_shot_vector):angles())
-        local resulting_dir = vector(shoot_pos:to(impact_data[1]):angles())
-        local dist = ideal_dir:dist2d(resulting_dir)
+        local dist = ideal_dir:dist2d(vector(shoot_pos:to(impact_data[1]):angles()))
 
         while dist > 180 do
             dist = dist - 360
@@ -317,7 +311,7 @@ local g_aimbot_worker =
             dist = dist + 360
         end
 
-        return dist
+        return math_abs(dist)
     end
 
     local m_handle_bullet_impact = function(ev)
@@ -346,40 +340,24 @@ local g_aimbot_worker =
 
     local m_add_value_to_buffer = function(tbl, val, upper) local cnt = #tbl + 1 tbl[cnt] = val if cnt > upper then table_remove(tbl, 1) end end
 
+    local m_flag_builder = {
+        { "H", function(ev) return ev.high_priority end },
+        { "LTHL", function(ev, aim_data) local hp = entity_get_prop(ev.target, "m_iHealth") or 999; if ev.damage >= hp then aim_data.m_lethal = true; return true end return false end },
+        { "FB", function(ev) return m_helpers.is_forcing_bodyaim(ev.target) end },
+        { "", function(ev) if plist_get(ev.target, "Force body yaw") then return true, ("BODY %.d°"):format(plist_get(ev.target, "Force body yaw value")) end return false end }
+    }
+
     local m_build_flag_table = function(ev, aim_data)
         local flag_table = {}
 
         local flag_it = 1
 
-        if ev.high_priority then
-            flag_table[flag_it] = "H"
-            flag_it = flag_it + 1
-        end
-
-        if ev.interpolated then
-            flag_table[flag_it] = "I"
-            flag_it = flag_it + 1
-        end
-
-        if ev.extrapolated then
-            flag_table[flag_it] = "E"
-            flag_it = flag_it + 1
-        end
-
-        if ev.teleported then
-            flag_table[flag_it] = "LC"
-            flag_it = flag_it + 1
-        end
-
-        if ev.damage >= (entity_get_prop(ev.target, "m_iHealth") or 999) then
-            flag_table[flag_it] = "L"
-            flag_it = flag_it + 1
-
-            aim_data.m_lethal = true -- i know this is dirty
-        end
-
-        if m_helpers.is_forcing_bodyaim(ev.target) then
-            flag_table[flag_it] = "FB"
+        for i = 1, #m_flag_builder do
+            local flag_value = m_flag_builder[i]; local is_active, custom_flag = flag_value[2](ev, aim_data)
+            if is_active then
+                flag_table[flag_it] = custom_flag or flag_value[1]
+                flag_it = flag_it + 1
+            end
         end
 
         return flag_table
@@ -408,23 +386,13 @@ local g_aimbot_worker =
         if aim_data.m_lethal then
             g_aimbot_history_table.m_total_lethal_shots = g_aimbot_history_table.m_total_lethal_shots + 1
         end
-        
-        m_add_value_to_buffer(g_aimbot_history_table.m_additional_data.m_hitchances, ev.hit_chance, 250)
-        m_add_value_to_buffer(g_aimbot_history_table.m_additional_data.m_backtracks, aim_data.m_backtrack_amount, 250)
 
         m_aimbot_shot_tracklist[ev.id] = aim_data
+        m_add_value_to_buffer(g_aimbot_history_table.m_additional_data.m_hitchances, ev.hit_chance, 250)
+        m_add_value_to_buffer(g_aimbot_history_table.m_additional_data.m_backtracks, aim_data.m_backtrack_amount, 250)
     end
 
-    local m_hitgroups = {
-        "head",
-        "chest",
-        "stomach",
-        "left arm",
-        "right arm",
-        "left leg",
-        "right leg",
-        "neck"
-    }
+    local m_hitgroups = { "head", "chest", "stomach", "left arm", "right arm", "left leg", "right leg", "neck" }
 
     local m_handle_aim_hit = function(ev)
         local shot_id = ev.id
@@ -477,16 +445,16 @@ local g_aimbot_worker =
         g_log_worker.add_event_to_log(
             ("[%d] Hit "):format(shot_id),
             { rgb = "green", text = entity_get_player_name(ev.target) }, "'s ",
-            { rgb = "green", text = m_hitgroups[hit_hitgroup] }, " (targeted ", 
+            { rgb = "green", text = m_hitgroups[hit_hitgroup] }, " (targeted ",
             { rgb = "green", text = m_hitgroups[aim_data.m_hitgroup] }, ") for ",
-            { rgb = "green", text = ("%d"):format(dealt_damage) }, " HP (", 
+            { rgb = "green", text = ("%d"):format(dealt_damage) }, " HP (",
             { rgb = "green", text = ("%d"):format(entity_get_prop(ev.target, "m_iHealth")) }, " HP remaining) (spread: ",
             { rgb = "green", text = ("%s"):format(spread_angle and ("%.3f°"):format(spread_angle) or "lost track of shot") }, ") - (pred. damage: ",
-            { rgb = "green", text = ("%d"):format(aim_data.m_damage) }, " HP, minimum damage ", 
+            { rgb = "green", text = ("%d"):format(aim_data.m_damage) }, " HP, minimum damage ",
             { rgb = "green", text = ("%d"):format(mindmg) }, " HP | Hit chance: ",
             { rgb = "green", text = ("%d%%"):format(ev.hit_chance) }, " | Bt: ",
             { rgb = "green", text = ("%d"):format(aim_data.m_backtrack_amount) }, "t | Safe point: ",
-            { rgb = "green", text = tostring(aim_data.m_safepoint) }, ") (Flags: ", 
+            { rgb = "green", text = tostring(aim_data.m_safepoint) }, ") (Flags: ",
             { rgb = "green", text = (#aim_data.m_flags == 0 and "None" or aim_data.m_flags) }, ")"
         )
     end
@@ -512,10 +480,7 @@ local g_aimbot_worker =
     end
 
     local m_miss_data_processor_functions = {
-        ["spread"] = m_full_data_processor_fn,
-        ["?"] = m_full_data_processor_fn,
-        ["prediction error"] = m_full_data_processor_fn,
-        ["unregistered shot"] = function(tbl) tbl.m_count = tbl.m_count + 1 end,
+        ["spread"] = m_full_data_processor_fn, ["?"] = m_full_data_processor_fn, ["prediction error"] = m_full_data_processor_fn, ["unregistered shot"] = function(tbl) tbl.m_count = tbl.m_count + 1 end,
         ["death"] = function(tbl)
             tbl.m_count = tbl.m_count + 1
             local is_local_dead = not entity_is_alive(entity_get_local_player())
@@ -525,7 +490,6 @@ local g_aimbot_worker =
 
     local m_handle_aim_miss = function(ev)
         local id = ev.id
-
         local aim_data = m_aimbot_shot_tracklist[id]
 
         if not aim_data then
@@ -533,7 +497,6 @@ local g_aimbot_worker =
         end
 
         local miss_reason = ev.reason
-
         g_aimbot_history_table.m_misses.m_total_misses = g_aimbot_history_table.m_misses.m_total_misses + 1
         m_miss_data_processor_functions[miss_reason](m_miss_data_tables[miss_reason], aim_data)
 
@@ -547,24 +510,18 @@ local g_aimbot_worker =
             ("[%d] Missed "):format(id),
             { rgb = "red", text = entity_get_player_name(ev.target) }, "'s ",
             { rgb = "red", text = m_hitgroups[ev.hitgroup] }, " due to ",
-            { rgb = "red", text = miss_reason }, " (spread: ", 
+            { rgb = "red", text = miss_reason }, " (spread: ",
             { rgb = "red", text = ("%s"):format(spread_angle and ("%.3f°"):format(spread_angle) or "lost track of shot") }, ")  - (pred. damage: ",
-            { rgb = "red", text = ("%d"):format(aim_data.m_damage) }, " HP, minimum damage ", 
+            { rgb = "red", text = ("%d"):format(aim_data.m_damage) }, " HP, minimum damage ",
             { rgb = "red", text = ("%d"):format(aim_data.m_minimum_damage) }, " HP | Hit chance: ",
             { rgb = "red", text = ("%d%%"):format(ev.hit_chance) }, " | Bt: ",
             { rgb = "red", text = ("%d"):format(aim_data.m_backtrack_amount) }, "t | Safe point: ",
-            { rgb = "red", text = tostring(aim_data.m_safepoint) }, ") (Flags: ", 
+            { rgb = "red", text = tostring(aim_data.m_safepoint) }, ") (Flags: ",
             { rgb = "red", text = (#aim_data.m_flags == 0 and "None" or aim_data.m_flags) }, ")"
         )
     end
 
-    return {
-        on_aim_fire = m_handle_aim_fire,
-        on_bullet_impact = m_handle_bullet_impact,
-        on_aim_hit = m_handle_aim_hit,
-        on_aim_miss = m_handle_aim_miss,
-        get_database_ptr = function() return g_aimbot_history_table end
-    }
+    return { on_aim_fire = m_handle_aim_fire, on_bullet_impact = m_handle_bullet_impact, on_aim_hit = m_handle_aim_hit, on_aim_miss = m_handle_aim_miss, get_database_ptr = function() return g_aimbot_history_table end }
 end)()
 
 local g_container_manager = (function()
@@ -647,10 +604,8 @@ local g_container_manager = (function()
 
             m_calculate_head_body_limb_accuracy()
 
-            m_aimbot_data_table.m_total_shots = m_aimbot_data_ptr.m_total_fired_shots
-            m_aimbot_data_table.m_total_kills = m_aimbot_data_ptr.m_total_kills
+            m_aimbot_data_table.m_total_shots, m_aimbot_data_table.m_total_kills, m_aimbot_data_table.m_total_zeus = m_aimbot_data_ptr.m_total_fired_shots, m_aimbot_data_ptr.m_total_kills, m_aimbot_data_ptr.m_total_zeus_kills
             m_aimbot_data_table.m_total_headshots = m_aimbot_data_ptr.m_hits.m_basic_hits.m_per_hitbox.head + m_aimbot_data_ptr.m_hits.m_sp_hits.m_per_hitbox.head
-            m_aimbot_data_table.m_total_zeus = m_aimbot_data_ptr.m_total_zeus_kills
 
             m_calculate_miss_chart()
 
@@ -676,10 +631,7 @@ local g_container_manager = (function()
             end
         end
 
-        return {
-            tick = m_check_for_data_update,
-            get_data_ptr = function() return m_aimbot_data_table end
-        }
+        return { tick = m_check_for_data_update, get_data_ptr = function() return m_aimbot_data_table end }
     end)()
 
     local m_render_aim_data_ptr = m_aimbot_dataset_processor.get_data_ptr()
@@ -701,7 +653,7 @@ local g_container_manager = (function()
     end
 
     local m_display_sizes = {
-        ["mini"] = (function() 
+        ["mini"] = (function()
             local m_container_callback_function = function(x, y, w, h)
                 local current_dpi_scale = m_scaling_multipliers[ui_get(m_dpi_scale_reference)]
                 local r, g, b = ui_get(g_accent_color_picker)
@@ -718,17 +670,17 @@ local g_container_manager = (function()
 
                 do
                     local x, y, w, h = x + w * 0.15, y + h * 0.1, w * 0.85, h * 0.9
-                    
+
                     local m_rendered_strings = {
                         { "HEAD:", ( "%.1f%%" ):format( m_render_aim_data_ptr.m_accuracy_by_spec.head * 100 ) },
                         { "BODY:", ( "%.1f%%" ):format( m_render_aim_data_ptr.m_accuracy_by_spec.body * 100 ) },
                         { "SP:", ( "%.1f%%" ):format( m_render_aim_data_ptr.m_accuracy_by_spec.sp * 100 ) },
                         { "MOST MISSES", ( "%s" ):format( m_render_aim_data_ptr.m_most_common_reason ) }
-                    }
+                    }; local string_cnt = #m_rendered_strings
 
-                    local allowed_slice = h * 0.25
-                    
-                    for i = 1, 4 do
+                    local allowed_slice = h / string_cnt
+
+                    for i = 1, string_cnt do
                         local left, right = unpack(m_rendered_strings[i])
 
                         renderer_text(m_round_number(x), m_round_number(y + allowed_slice * (i - 1)), 255, 255, 255, 200, "d-", 0, left)
@@ -737,7 +689,7 @@ local g_container_manager = (function()
                 end
             end
 
-            return { m_display_width = 120, m_display_height = 65, m_last_width = 120, m_last_height = 65, m_container_callback = m_container_callback_function } 
+            return { m_display_width = 120, m_display_height = 65, m_last_width = 120, m_last_height = 65, m_container_callback = m_container_callback_function }
         end)(),
         ["full sized"] = (function()
             local m_chart_colors = {
@@ -751,33 +703,33 @@ local g_container_manager = (function()
             local m_container_callback_function = function(x, y, w, h)
                 local current_dpi_scale = m_scaling_multipliers[ui_get(m_dpi_scale_reference)]
                 local r, g, b = ui_get(g_accent_color_picker)
-        
+
                 renderer_text(x + w * 0.5, y, 255, 255, 255, 200, "cd-", 0, "AIMBOT STATS")
                 local text_size_y = ({ renderer_measure_text("d-", "AIMBOT STATS") })[2]
-        
+
                 renderer_text(x + w * 0.5, y + text_size_y, 255, 255, 255, 200, "cd-", 0, "TOTAL ACCURACY%")
-        
+
                 renderer_rectangle(m_round_number(x + w * 0.05), m_round_number(y + 16 * current_dpi_scale), m_round_number(w * 0.9), m_round_number(7 * current_dpi_scale), 17, 17, 17, 225)
                 renderer_rectangle(m_round_number(x + w * 0.05 + 1), m_round_number(y + 17 * current_dpi_scale), m_round_number((w * 0.9 - 1) * m_render_aim_data_ptr.m_total_accuracy_rate), m_round_number(5 * current_dpi_scale), r, g, b, 255)
                 renderer_rectangle(m_round_number(x + w * 0.05 + 1 + (w * 0.9 - 1) * m_render_aim_data_ptr.m_total_accuracy_rate), m_round_number(y + 16 * current_dpi_scale), 1, m_round_number(7 * current_dpi_scale), r, g, b, 255)
                 renderer_text(m_round_number(x + w * 0.05 + 1 + (w * 0.9 - 1) * m_render_aim_data_ptr.m_total_accuracy_rate), m_round_number(y + 23 * current_dpi_scale), 255, 255, 255, 200, "cd-", 0, ("%d%%"):format(m_render_aim_data_ptr.m_total_accuracy_rate * 100))
-        
+
                 do
                     local left_bound_x, right_bound_x = x + w * 0.05, x + w * 0.55
-        
+
                     local y = y + 27 * current_dpi_scale
                     local w = w * 0.4
                     local h = h - 27 * current_dpi_scale
-        
+
                     do -- left
                         local x = left_bound_x
-        
+
                         local accuracy_by_spec = m_render_aim_data_ptr.m_accuracy_by_spec
-        
+
                         renderer_text(m_round_number(x), m_round_number(y), 255, 255, 255, 200, "d-", 0,
                             "HEAD: \nBODY: \nLIMBS: \nSP: \nLETHAL SHOT: "
                         )
-        
+
                         local accuracy_str = ("%.1f%%\n%.1f%%\n%.1f%%\n%.1f%%\n%.1f%%"):format(
                             accuracy_by_spec.head * 100,
                             accuracy_by_spec.body * 100,
@@ -785,83 +737,83 @@ local g_container_manager = (function()
                             accuracy_by_spec.sp * 100,
                             accuracy_by_spec.lethal * 100
                         )
-        
+
                         renderer_text(m_round_number(x + w * 0.95), m_round_number(y), 255, 255, 255, 200, "dr-", 0, accuracy_str)
-        
+
                         local measurement_x = renderer_measure_text("d-", accuracy_str)
-        
+
                         local y = y + h * 0.6
-        
+
                         renderer_text(m_round_number(x), m_round_number(y), 255, 255, 255, 200, "d-", 0, "TOTAL SHOTS: \nTOTAL KILLS: \nTOTAL HS: \nTOTAL ZEUSES: ")
                         renderer_text(m_round_number(x + w * 0.95 - measurement_x), y, 255, 255, 255, 200, "d-", 0, ("%d\n%d\n%d\n%d"):format(m_render_aim_data_ptr.m_total_shots, m_render_aim_data_ptr.m_total_kills, m_render_aim_data_ptr.m_total_headshots, m_render_aim_data_ptr.m_total_zeus) )
                     end
-        
+
                     do -- right
                         local x = right_bound_x
                         local target_circle_radius = h * 0.2
-        
+
                         renderer_text(m_round_number(x + w * 0.5 - renderer_measure_text("d-", "MISS CHART:") * 0.5), m_round_number(y), 255, 255, 255, 200, "d-", 0, "MISS CHART:")
-        
+
                         local circle_center_x, circle_center_y = m_round_number(x + w * 0.5), m_round_number(y + target_circle_radius + 14 * current_dpi_scale)
                         renderer_circle(circle_center_x, circle_center_y, 17, 17, 17, 225, m_round_number(target_circle_radius), 0, 1)
-        
+
                         local ang_start = 270
                         local miss_reasons = m_render_aim_data_ptr.m_miss_reasons
-                        
+
                         local pie_chart_text_positions = {} -- prevent text clipping
                         local pie_chart_text_position_it = 1
-        
+
                         for i = 1, #miss_reasons do
                             local t = miss_reasons[i]
-        
+
                             local frac = t.m_percentage
-        
+
                             if t.m_count == 0 then
                               goto continue
                             end
-        
+
                             local r, g, b = unpack(m_chart_colors[i])
                             renderer_circle_outline(circle_center_x, circle_center_y, r, g, b, 225, m_round_number(target_circle_radius - 1), ang_start, t.m_percentage, m_round_number(25 * current_dpi_scale - 1))
-                            
+
                             if frac > 0.05 then
                                 local ang = math_rad(ang_start) + (2 * math.pi * frac * 0.5)
                                 local position_x, position_y = circle_center_x + math_cos(ang) * target_circle_radius * 0.6, circle_center_y + math_sin(ang) * target_circle_radius * 0.6
-        
+
                                 pie_chart_text_positions[pie_chart_text_position_it] = {
                                     m_name = t.m_name,
                                     m_frac = frac * 100,
-        
+
                                     x = position_x,
                                     y = position_y
                                 }
-        
+
                                 pie_chart_text_position_it = pie_chart_text_position_it + 1
                             end
-        
+
                             ang_start = ang_start + math_deg((2 * math.pi * t.m_percentage))
                             ::continue::
                         end
-        
+
                         for i = 1, #pie_chart_text_positions do
                             local v = pie_chart_text_positions[i]
-        
-                            renderer_text(m_round_number(v.x), m_round_number(v.y), 255, 255, 255, 225, (current_dpi_scale == 1 and "c-" or "c"), 0, 
+
+                            renderer_text(m_round_number(v.x), m_round_number(v.y), 255, 255, 255, 225, (current_dpi_scale == 1 and "c-" or "c"), 0,
                                 ("%s (%d%%)"):format(v.m_name, v.m_frac)
                             )
                         end
-        
+
                         local y = y + h * 0.6
-        
+
                         renderer_text(m_round_number(x), m_round_number(y), 255, 255, 255, 200, "d-", 0, "MOST COMMON: \nAVG HC: \nAVG SPREAD: \nAVG SHOTS/KILL: ")
-                        renderer_text(m_round_number(x + w * 0.95), m_round_number(y), 255, 255, 255, 200, "dr-", 0, 
+                        renderer_text(m_round_number(x + w * 0.95), m_round_number(y), 255, 255, 255, 200, "dr-", 0,
                             ("%s\n%.1f%%\n%.2f°\n%.2f"):format(miss_reasons[1].m_full_name, m_render_aim_data_ptr.m_average_hc, m_render_aim_data_ptr.m_average_spread, m_render_aim_data_ptr.m_average_shots_per_kill)
                         )
-        
+
                     end
                 end
             end
 
-            return { m_display_width = 300, m_display_height = 150, m_last_width = 300, m_last_height = 150, m_container_callback = m_container_callback_function } 
+            return { m_display_width = 300, m_display_height = 150, m_last_width = 300, m_last_height = 150, m_container_callback = m_container_callback_function }
         end)()
     }
 
@@ -907,7 +859,7 @@ local g_container_manager = (function()
 
             end
 
-            local m_inversion_progress = 0 
+            local m_inversion_progress = 0
             -- I know I should use easing for this
             -- however, I will not
 
@@ -989,8 +941,7 @@ local g_container_manager = (function()
             return function()
                 local render_table_ptr = m_aimbot_data_ptr.m_renderer_data
 
-                local mouse_down = client_key_state(1)
-                local mouse_x, mouse_y = ui_mouse_position()
+                local mouse_down, mouse_x, mouse_y = client_key_state(1), ui_mouse_position()
 
                 local display_sizes = m_display_sizes[ui_get(g_statistics_style)]
 
@@ -1001,8 +952,7 @@ local g_container_manager = (function()
                 -- fuck cia
 
                 if can_drag then
-                    m_dragging = true
-                    m_drag_start_x, m_drag_start_y = mouse_x - render_table_ptr.m_draggable_position_x, mouse_y - render_table_ptr.m_draggable_position_y
+                    m_dragging, m_drag_start_x, m_drag_start_y = true, mouse_x - render_table_ptr.m_draggable_position_x, mouse_y - render_table_ptr.m_draggable_position_y
                 elseif mouse_down and m_dragging then
                     render_table_ptr.m_draggable_position_x, render_table_ptr.m_draggable_position_y = mouse_x - m_drag_start_x, mouse_y - m_drag_start_y
                 else
@@ -1017,13 +967,10 @@ local g_container_manager = (function()
 
     local m_draw_container = function(x, y)
         local r, g, b = ui_get(g_accent_color_picker)
-
         local display_mode = m_display_sizes[ui_get(g_statistics_style)]
-
         local scaling_multiplier = m_scaling_multipliers[ui_get(m_dpi_scale_reference)]
 
         local w, h = display_mode.m_display_width * scaling_multiplier, display_mode.m_display_height * scaling_multiplier
-
         display_mode.m_last_width, display_mode.m_last_height = w, h
 
         m_render_engine.render_container(
@@ -1059,11 +1006,9 @@ local g_console_manager = (function()
             local m_get_average = function(t)
                 local c = #t
                 local v = 0
-
                 for i = 1, c do
                     v = v + t[i]
                 end
-
                 return v / math_max(1, c)
             end
 
@@ -1074,46 +1019,46 @@ local g_console_manager = (function()
                     local total_shots_safe, total_sp_shots_safe = math_max(1, total_shots), math_max(1, total_sp_shots)
 
                     local hits_table = m_aimbot_data_ptr.m_hits
-                    
+
                     local normal_hits_table = hits_table.m_basic_hits
                     local sp_hits_table = hits_table.m_sp_hits
 
                     local rows, headings = {
-                        { "Hits", 
-                            ( "%d (Safe point: %d)" ):format( normal_hits_table.m_per_hitbox.head, sp_hits_table.m_per_hitbox.head ), 
-                            ( "%d (Safe point: %d)" ):format( normal_hits_table.m_per_hitbox.body, sp_hits_table.m_per_hitbox.body ), 
-                            ( "%d (Safe point: %d)" ):format( normal_hits_table.m_per_hitbox.limbs, sp_hits_table.m_per_hitbox.limbs ), 
-                            ( "%d (Safe point: %d)" ):format( normal_hits_table.m_count, sp_hits_table.m_count ) 
+                        { "Hits",
+                            ( "%d (Safe point: %d)" ):format( normal_hits_table.m_per_hitbox.head, sp_hits_table.m_per_hitbox.head ),
+                            ( "%d (Safe point: %d)" ):format( normal_hits_table.m_per_hitbox.body, sp_hits_table.m_per_hitbox.body ),
+                            ( "%d (Safe point: %d)" ):format( normal_hits_table.m_per_hitbox.limbs, sp_hits_table.m_per_hitbox.limbs ),
+                            ( "%d (Safe point: %d)" ):format( normal_hits_table.m_count, sp_hits_table.m_count )
                         },
 
-                        { "Aim rate", 
-                            ( "%.1f%% (Safe point: %.1f%%)" ):format( (m_aimbot_data_ptr.m_fired_shots_by_hitbox.head / total_shots_safe) * 100, (m_aimbot_data_ptr.m_sp_fired_shots_by_hitbox.head / total_shots_safe) * 100 ), 
-                            ( "%.1f%% (Safe point: %.1f%%)" ):format( (m_aimbot_data_ptr.m_fired_shots_by_hitbox.body / total_shots_safe) * 100,  (m_aimbot_data_ptr.m_sp_fired_shots_by_hitbox.body / total_shots_safe) * 100 ), 
-                            ( "%.1f%% (Safe point: %.1f%%)" ):format( (m_aimbot_data_ptr.m_fired_shots_by_hitbox.limbs / total_shots_safe) * 100, (m_aimbot_data_ptr.m_sp_fired_shots_by_hitbox.limbs / total_shots_safe) * 100 ), 
-                        "N/A" },   
+                        { "Aim rate",
+                            ( "%.1f%% (Safe point: %.1f%%)" ):format( (m_aimbot_data_ptr.m_fired_shots_by_hitbox.head / total_shots_safe) * 100, (m_aimbot_data_ptr.m_sp_fired_shots_by_hitbox.head / total_shots_safe) * 100 ),
+                            ( "%.1f%% (Safe point: %.1f%%)" ):format( (m_aimbot_data_ptr.m_fired_shots_by_hitbox.body / total_shots_safe) * 100,  (m_aimbot_data_ptr.m_sp_fired_shots_by_hitbox.body / total_shots_safe) * 100 ),
+                            ( "%.1f%% (Safe point: %.1f%%)" ):format( (m_aimbot_data_ptr.m_fired_shots_by_hitbox.limbs / total_shots_safe) * 100, (m_aimbot_data_ptr.m_sp_fired_shots_by_hitbox.limbs / total_shots_safe) * 100 ),
+                        "N/A" },
 
-                        { "Accuracy", 
-                            ( "%.1f%% (Safe point: %.1f%%)" ):format( (normal_hits_table.m_per_hitbox.head / math_max(1, m_aimbot_data_ptr.m_fired_shots_by_hitbox.head)) * 100,  (sp_hits_table.m_per_hitbox.head / math_max(1, m_aimbot_data_ptr.m_sp_fired_shots_by_hitbox.head)) * 100 ), 
-                            ( "%.1f%% (Safe point: %.1f%%)" ):format( (normal_hits_table.m_per_hitbox.body / math_max(1, m_aimbot_data_ptr.m_fired_shots_by_hitbox.body)) * 100,  (sp_hits_table.m_per_hitbox.body / math_max(1, m_aimbot_data_ptr.m_sp_fired_shots_by_hitbox.body)) * 100 ), 
-                            ( "%.1f%% (Safe point: %.1f%%)" ):format( (normal_hits_table.m_per_hitbox.limbs / math_max(1, m_aimbot_data_ptr.m_fired_shots_by_hitbox.limbs)) * 100, (sp_hits_table.m_per_hitbox.limbs / math_max(1, m_aimbot_data_ptr.m_sp_fired_shots_by_hitbox.limbs)) * 100 ), 
-                            ( "%.1f%% (Safe point: %.1f%%)" ):format( (normal_hits_table.m_count / math_max(1, total_shots - total_sp_shots)) * 100, (sp_hits_table.m_count / total_sp_shots_safe) * 100 ) 
+                        { "Accuracy",
+                            ( "%.1f%% (Safe point: %.1f%%)" ):format( (normal_hits_table.m_per_hitbox.head / math_max(1, m_aimbot_data_ptr.m_fired_shots_by_hitbox.head)) * 100,  (sp_hits_table.m_per_hitbox.head / math_max(1, m_aimbot_data_ptr.m_sp_fired_shots_by_hitbox.head)) * 100 ),
+                            ( "%.1f%% (Safe point: %.1f%%)" ):format( (normal_hits_table.m_per_hitbox.body / math_max(1, m_aimbot_data_ptr.m_fired_shots_by_hitbox.body)) * 100,  (sp_hits_table.m_per_hitbox.body / math_max(1, m_aimbot_data_ptr.m_sp_fired_shots_by_hitbox.body)) * 100 ),
+                            ( "%.1f%% (Safe point: %.1f%%)" ):format( (normal_hits_table.m_per_hitbox.limbs / math_max(1, m_aimbot_data_ptr.m_fired_shots_by_hitbox.limbs)) * 100, (sp_hits_table.m_per_hitbox.limbs / math_max(1, m_aimbot_data_ptr.m_sp_fired_shots_by_hitbox.limbs)) * 100 ),
+                            ( "%.1f%% (Safe point: %.1f%%)" ):format( (normal_hits_table.m_count / math_max(1, total_shots - total_sp_shots)) * 100, (sp_hits_table.m_count / total_sp_shots_safe) * 100 )
                         },
 
-                        { "Mismatches", 
+                        { "Mismatches",
                             ( "%d (%.1f%%) (Safe point: %d (%.1f%%) )" ):format(
-                                normal_hits_table.m_mismatches_per_hitbox.head, (normal_hits_table.m_mismatches_per_hitbox.head / math_max(1, hits_table.m_total_hits)) * 100, 
+                                normal_hits_table.m_mismatches_per_hitbox.head, (normal_hits_table.m_mismatches_per_hitbox.head / math_max(1, hits_table.m_total_hits)) * 100,
                                 sp_hits_table.m_mismatches_per_hitbox.head, (sp_hits_table.m_mismatches_per_hitbox.head / math_max(1, hits_table.m_total_hits)) * 100
-                            ), 
+                            ),
                             ( "%d (%.1f%%) (Safe point: %d (%.1f%%) )" ):format(
-                                normal_hits_table.m_mismatches_per_hitbox.body, (normal_hits_table.m_mismatches_per_hitbox.body / math_max(1, hits_table.m_total_hits)) * 100, 
+                                normal_hits_table.m_mismatches_per_hitbox.body, (normal_hits_table.m_mismatches_per_hitbox.body / math_max(1, hits_table.m_total_hits)) * 100,
                                 sp_hits_table.m_mismatches_per_hitbox.body, (sp_hits_table.m_mismatches_per_hitbox.body / math_max(1, hits_table.m_total_hits)) * 100
-                            ), 
+                            ),
                             ( "%d (%.1f%%) (Safe point: %d (%.1f%%) )" ):format(
-                                normal_hits_table.m_mismatches_per_hitbox.limbs, (normal_hits_table.m_mismatches_per_hitbox.limbs / math_max(1, hits_table.m_total_hits)) * 100, 
+                                normal_hits_table.m_mismatches_per_hitbox.limbs, (normal_hits_table.m_mismatches_per_hitbox.limbs / math_max(1, hits_table.m_total_hits)) * 100,
                                 sp_hits_table.m_mismatches_per_hitbox.limbs, (sp_hits_table.m_mismatches_per_hitbox.limbs / math_max(1, hits_table.m_total_hits)) * 100
-                            ), 
+                            ),
                             ( "%d (%.1f%%) (Safe point: %d (%.1f%%) )" ):format(
-                                normal_hits_table.m_mismatches, (normal_hits_table.m_mismatches / math_max(1, hits_table.m_total_hits)) * 100, 
+                                normal_hits_table.m_mismatches, (normal_hits_table.m_mismatches / math_max(1, hits_table.m_total_hits)) * 100,
                                 sp_hits_table.m_mismatches, (sp_hits_table.m_mismatches / math_max(1, hits_table.m_total_hits)) * 100
                             )
                         }
@@ -1140,18 +1085,18 @@ local g_console_manager = (function()
 
                 ["misses"] = function()
                     local total_shots = m_aimbot_data_ptr.m_total_fired_shots; local total_shots_safe = math_max(1, total_shots)
-    
+
                     local misses_table = m_aimbot_data_ptr.m_misses
-    
+
                     local total_misses, total_misses_safe = misses_table.m_total_misses, math_max(1, misses_table.m_total_misses)
-    
+
                     client_log( ("Total misses: %d (Miss rate: %.1f%%)"):format(
-                        misses_table.m_total_misses, 
+                        misses_table.m_total_misses,
                         (total_misses / total_shots_safe) * 100
                     ) )
-    
+
                     local total_head_safe, total_body_safe, total_limbs_safe = math_max(1, misses_table.m_total_misses_by_hitbox.head), math_max(1, misses_table.m_total_misses_by_hitbox.body), math_max(1, misses_table.m_total_misses_by_hitbox.limbs)
-    
+
                     local m_build_miss_reason_table = function(name, t)
                         return {
                             name,
@@ -1227,7 +1172,7 @@ local g_console_manager = (function()
 
     local m_handle_console_input = function(input)
         local match_command, match_arg = input:match("%.logger%s(%g+)%s*(%g*)")
- 
+
         if match_command and m_command_handlers[match_command] then
             client_delay_call(0.01, m_command_handlers[match_command], match_arg)
             return true
