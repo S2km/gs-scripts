@@ -1179,9 +1179,7 @@ local g_console_manager = (function()
         end
     end
 
-    return {
-       on_console_input = m_handle_console_input
-    }
+    return { on_console_input = m_handle_console_input }
 end)()
 
 local g_paint_callback = function()
