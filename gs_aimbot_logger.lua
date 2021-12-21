@@ -1,5 +1,5 @@
 -- local variables for API functions. any changes to the line below will be lost on re-generation
-local bit_band, client_color_log, client_delay_call, client_eye_position, client_key_state, client_log, client_screen_size, client_set_event_callback, client_unset_event_callback, client_userid_to_entindex, database_read, database_write, entity_get_local_player, entity_get_player_name, entity_get_player_weapon, entity_get_prop, entity_hitbox_position, entity_is_alive, globals_chokedcommands, globals_lastoutgoingcommand, globals_realtime, globals_tickcount, plist_get, renderer_measure_text, renderer_text, require, table_concat, table_remove, ui_get, ui_new_button, ui_new_checkbox, ui_new_color_picker, ui_new_combobox, ui_new_multiselect, pairs, error, globals_absoluteframetime, json_stringify, math_cos, math_deg, math_floor, math_max, math_rad, math_sin, renderer_blur, renderer_circle, renderer_circle_outline, renderer_gradient, renderer_line, renderer_rectangle, renderer_world_to_screen, table_insert, table_sort, tostring, getmetatable, setmetatable, type, assert, ui_mouse_position, ui_reference, ui_set_callback, ui_set_visible, unpack, ui_new_slider, ui_new_label, vtable_bind, vtable_thunk, math_min, math_abs = bit.band, client.color_log, client.delay_call, client.eye_position, client.key_state, client.log, client.screen_size, client.set_event_callback, client.unset_event_callback, client.userid_to_entindex, database.read, database.write, entity.get_local_player, entity.get_player_name, entity.get_player_weapon, entity.get_prop, entity.hitbox_position, entity.is_alive, globals.chokedcommands, globals.lastoutgoingcommand, globals.realtime, globals.tickcount, plist.get, renderer.measure_text, renderer.text, require, table.concat, table.remove, ui.get, ui.new_button, ui.new_checkbox, ui.new_color_picker, ui.new_combobox, ui.new_multiselect, pairs, error, globals.absoluteframetime, json.stringify, math.cos, math.deg, math.floor, math.max, math.rad, math.sin, renderer.blur, renderer.circle, renderer.circle_outline, renderer.gradient, renderer.line, renderer.rectangle, renderer.world_to_screen, table.insert, table.sort, tostring, getmetatable, setmetatable, type, assert, ui.mouse_position, ui.reference, ui.set_callback, ui.set_visible, unpack, ui.new_slider, ui.new_label, vtable_bind, vtable_thunk, math.min, math.abs
+local bit_band, client_latency, client_color_log, client_delay_call, client_eye_position, client_key_state, client_log, client_screen_size, client_set_event_callback, client_unset_event_callback, client_userid_to_entindex, database_read, database_write, entity_get_local_player, entity_get_player_name, entity_get_player_weapon, entity_get_prop, entity_hitbox_position, entity_is_alive, globals_chokedcommands, globals_lastoutgoingcommand, globals_realtime, globals_tickcount, plist_get, renderer_measure_text, renderer_text, require, table_concat, table_remove, ui_get, ui_new_button, ui_new_checkbox, ui_new_color_picker, ui_new_combobox, ui_new_multiselect, pairs, error, globals_absoluteframetime, json_stringify, math_cos, math_deg, math_floor, math_max, math_rad, math_sin, renderer_blur, renderer_circle, renderer_circle_outline, renderer_gradient, renderer_line, renderer_rectangle, renderer_world_to_screen, table_insert, table_sort, tostring, getmetatable, setmetatable, type, assert, ui_mouse_position, ui_reference, ui_set_callback, ui_set_visible, unpack, ui_new_slider, ui_new_label, vtable_bind, vtable_thunk, math_min, math_abs = bit.band, client.latency, client.color_log, client.delay_call, client.eye_position, client.key_state, client.log, client.screen_size, client.set_event_callback, client.unset_event_callback, client.userid_to_entindex, database.read, database.write, entity.get_local_player, entity.get_player_name, entity.get_player_weapon, entity.get_prop, entity.hitbox_position, entity.is_alive, globals.chokedcommands, globals.lastoutgoingcommand, globals.realtime, globals.tickcount, plist.get, renderer.measure_text, renderer.text, require, table.concat, table.remove, ui.get, ui.new_button, ui.new_checkbox, ui.new_color_picker, ui.new_combobox, ui.new_multiselect, pairs, error, globals.absoluteframetime, json.stringify, math.cos, math.deg, math.floor, math.max, math.rad, math.sin, renderer.blur, renderer.circle, renderer.circle_outline, renderer.gradient, renderer.line, renderer.rectangle, renderer.world_to_screen, table.insert, table.sort, tostring, getmetatable, setmetatable, type, assert, ui.mouse_position, ui.reference, ui.set_callback, ui.set_visible, unpack, ui.new_slider, ui.new_label, vtable_bind, vtable_thunk, math.min, math.abs
 
 local ffi = require("ffi")
 local vector = require("vector")
@@ -364,7 +364,7 @@ local g_aimbot_worker =
     end
 
     local m_handle_aim_fire = function(ev)
-        local aim_data = {}
+        local aim_data, me = {}, entity_get_local_player()
         aim_data.m_aim_pos, aim_data.m_shot_vector = vector(client_eye_position()), vector(ev.x, ev.y, ev.z)
         aim_data.m_command_number, aim_data.m_backtrack_amount = globals_lastoutgoingcommand() + globals_chokedcommands() + 1, math_max(0, globals_tickcount() - ev.tick)
         aim_data.m_hitgroup, aim_data.m_hit_chance, aim_data.m_damage, aim_data.m_hitgroup_class = ev.hitgroup, ev.hit_chance, ev.damage, m_helpers.get_hitgroup_class(ev.hitgroup)
@@ -378,7 +378,8 @@ local g_aimbot_worker =
 
         aim_data.m_lethal = false
         aim_data.m_flags = table_concat(m_build_flag_table(ev, aim_data), ",")
-        aim_data.m_zeus = bit_band(entity_get_prop(entity_get_player_weapon(entity_get_local_player()), "m_iItemDefinitionIndex"), 0xFFFF) == 31
+        aim_data.m_zeus = bit_band(entity_get_prop(entity_get_player_weapon(me), "m_iItemDefinitionIndex"), 0xFFFF) == 31
+        aim_data.m_slowdown, aim_data.m_latency = entity_get_prop(me, "m_flVelocityModifier"), client_latency()
 
         g_aimbot_history_table.m_total_fired_shots = g_aimbot_history_table.m_total_fired_shots + 1
         g_aimbot_history_table.m_fired_shots_by_hitbox[aim_data.m_hitgroup_class] = g_aimbot_history_table.m_fired_shots_by_hitbox[aim_data.m_hitgroup_class] + 1
@@ -453,8 +454,11 @@ local g_aimbot_worker =
             { rgb = "green", text = ("%d"):format(aim_data.m_damage) }, " HP, minimum damage ",
             { rgb = "green", text = ("%d"):format(mindmg) }, " HP | Hit chance: ",
             { rgb = "green", text = ("%d%%"):format(ev.hit_chance) }, " | Bt: ",
-            { rgb = "green", text = ("%d"):format(aim_data.m_backtrack_amount) }, "t | Safe point: ",
-            { rgb = "green", text = tostring(aim_data.m_safepoint) }, ") (Flags: ",
+            { rgb = "green", text = ("%d"):format(aim_data.m_backtrack_amount) }, "t | Ping: ",
+            { rgb = "green", text = ("%d"):format(aim_data.m_latency * 1000) } , "ms | Safe point: ",
+            { rgb = "green", text = tostring(aim_data.m_safepoint) }, " | Velocity modifier while firing: ", 
+            { rgb = "green", text = ("%d%%"):format( aim_data.m_slowdown * 100) }, ", now: ", 
+            { rgb = "green", text = ("%d%%"):format( (entity_get_prop(entity_get_local_player(), "m_flVelocityModifier") or 0) * 100) }, ") (Flags: ",
             { rgb = "green", text = (#aim_data.m_flags == 0 and "None" or aim_data.m_flags) }, ")"
         )
     end
@@ -515,8 +519,11 @@ local g_aimbot_worker =
             { rgb = "red", text = ("%d"):format(aim_data.m_damage) }, " HP, minimum damage ",
             { rgb = "red", text = ("%d"):format(aim_data.m_minimum_damage) }, " HP | Hit chance: ",
             { rgb = "red", text = ("%d%%"):format(ev.hit_chance) }, " | Bt: ",
-            { rgb = "red", text = ("%d"):format(aim_data.m_backtrack_amount) }, "t | Safe point: ",
-            { rgb = "red", text = tostring(aim_data.m_safepoint) }, ") (Flags: ",
+            { rgb = "red", text = ("%d"):format(aim_data.m_backtrack_amount) }, "t | Ping: ",
+            { rgb = "red", text = ("%d"):format(aim_data.m_latency * 1000) } , "ms | Safe point: ",
+            { rgb = "red", text = tostring(aim_data.m_safepoint) }, " | Velocity modifier while firing: ", 
+            { rgb = "red", text = ("%d%%"):format( aim_data.m_slowdown * 100) }, ", now: ", 
+            { rgb = "red", text = ("%d%%"):format( (entity_get_prop(entity_get_local_player(), "m_flVelocityModifier") or 0) * 100) }, ") (Flags: ",
             { rgb = "red", text = (#aim_data.m_flags == 0 and "None" or aim_data.m_flags) }, ")"
         )
     end
@@ -1179,7 +1186,9 @@ local g_console_manager = (function()
         end
     end
 
-    return { on_console_input = m_handle_console_input }
+    return {
+       on_console_input = m_handle_console_input
+    }
 end)()
 
 local g_paint_callback = function()
