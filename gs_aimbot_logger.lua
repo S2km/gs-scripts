@@ -97,7 +97,6 @@ local g_statistics_offset_label_thirdperson = ui_new_label("lua", "b", "offsets 
 local g_statistics_offset_x_thirdperson, g_statistics_offset_y_thirdperson = ui_new_slider("lua", "b", "\nstat_offset_x_tp", -200, 200, 0, false), ui_new_slider("lua", "b", "\nstat_offset_y_tp", -200, 200, 100, false)
 
 local g_accent_color_picker = ui_new_color_picker("lua", "b", "accent color picker", 170, 0, 125, 255)
-
 local g_erase_statistics = ui_new_button("lua", "b", "erase shot stats", g_database_accessor.erase_data)
 
 local g_log_worker = (function()
@@ -222,36 +221,26 @@ end)()
 
 local g_aimbot_worker =
     (function()
-    local g_aimbot_history_table = g_database_accessor.read_table()
+    local m_aimbot_history_table, m_aimbot_shot_tracklist, m_bullet_impact_tracklist = g_database_accessor.read_table(), {}, {}
 
-    local m_aimbot_shot_tracklist, m_bullet_impact_tracklist = {}, {}
-
-    local g_safepoint_reference, g_avoid_unsafe_hitboxes_reference, g_mindamage_reference, g_fbaim_reference = ui_reference("rage", "aimbot", "force safe point"), ui_reference("rage", "aimbot", "avoid unsafe hitboxes"), ui_reference("rage", "aimbot", "minimum damage"),
+    local m_safepoint_reference, m_avoid_unsafe_hitboxes_reference, m_mindamage_reference, m_fbaim_reference = ui_reference("rage", "aimbot", "force safe point"), ui_reference("rage", "aimbot", "avoid unsafe hitboxes"), ui_reference("rage", "aimbot", "minimum damage"),
         ui_reference("rage", "other", "force body aim")
 
     local m_helpers = (function()
         local this = {}
+        local m_hitgroup_indices = { ["Head"] = {1}, ["Chest"] = {2}, ["Stomach"] = {3}, ["Arms"] = {4, 5}, ["Legs"] = {6, 7}, ["Feet"] = {6, 7} }
 
-        local m_hitgroup_indices = {
-            ["Head"] = {1}, ["Chest"] = {2}, ["Stomach"] = {3}, ["Arms"] = {4, 5}, ["Legs"] = {6, 7},
-            ["Feet"] = {6, 7} -- can't be fucked to jerryrig my own tracing to reveal what hitbox we are actually targeting inshallah
-        }
-
-        this.is_safe_pointed = function(entity_index, hitgroup)
-            local sp_state = ui_get(g_safepoint_reference)
-
-            if sp_state then
+        local m_is_safe_pointed = function(entity_index, hitgroup)
+            if ui_get(m_safepoint_reference) then
                 return true
             end
 
             local plist_state = plist_get(entity_index, "Override safe point")
-
             if plist_state ~= "-" then
                 return plist_state == "On"
             end
 
-            local sp_hitgroups = ui_get(g_avoid_unsafe_hitboxes_reference)
-
+            local sp_hitgroups = ui_get(m_avoid_unsafe_hitboxes_reference)
             return (function()
                 for i = 1, #sp_hitgroups do
                     local _hitgroup = sp_hitgroups[i]
@@ -268,11 +257,7 @@ local g_aimbot_worker =
             end)() -- i hate goto i hate goto
         end
 
-        this.is_forcing_bodyaim = function(entity_index)
-            return plist_get(entity_index, "Override prefer body aim") == "Force" or ui_get(g_fbaim_reference)
-        end
-
-        this.get_hitgroup_class = function(h)
+        local m_get_hitgroup_class = function(h)
             if h == 1 then
                 return "head"
             elseif h <= 3 then
@@ -282,24 +267,17 @@ local g_aimbot_worker =
             end
         end
 
-        return this
+        return { is_safe_pointed = m_is_safe_pointed, is_forcing_bodyaim = function(entity_index) return ui_get(m_fbaim_reference) or plist_get(entity_index, "Override prefer body aim") == "Force" end, get_hitgroup_class = m_get_hitgroup_class }
     end)()
 
     local m_get_bullet_spread = function(id)
-        local aim_data = m_aimbot_shot_tracklist[id]
+        local aim_data, impact_data = m_aimbot_shot_tracklist[id], m_bullet_impact_tracklist[globals_lastoutgoingcommand() + globals_chokedcommands()]
 
-        if not aim_data then
+        if not aim_data or not impact_data then
             return
         end
 
-        local impact_data = m_bullet_impact_tracklist[globals_lastoutgoingcommand() + globals_chokedcommands()]
-
-        if not impact_data then
-            return -- "lost track of shot........"
-        end
-
         local shoot_pos = aim_data.m_aim_pos
-
         local ideal_dir = vector(shoot_pos:to(aim_data.m_shot_vector):angles())
         local dist = ideal_dir:dist2d(vector(shoot_pos:to(impact_data[1]):angles()))
 
@@ -342,24 +320,21 @@ local g_aimbot_worker =
 
     local m_flag_builder = {
         { "H", function(ev) return ev.high_priority end },
+        { "AX", (function() local cl_lagcompensation = cvar.cl_lagcompensation; return function() return cl_lagcompensation:get_int() == 0 end end)() },
         { "LTHL", function(ev, aim_data) local hp = entity_get_prop(ev.target, "m_iHealth") or 999; if ev.damage >= hp then aim_data.m_lethal = true; return true end return false end },
         { "FB", function(ev) return m_helpers.is_forcing_bodyaim(ev.target) end },
         { "", function(ev) if plist_get(ev.target, "Force body yaw") then return true, ("BODY %.d°"):format(plist_get(ev.target, "Force body yaw value")) end return false end }
     }
 
     local m_build_flag_table = function(ev, aim_data)
-        local flag_table = {}
-
-        local flag_it = 1
-
+        local flag_table, flag_it = {}, 1
         for i = 1, #m_flag_builder do
-            local flag_value = m_flag_builder[i]; local is_active, custom_flag = flag_value[2](ev, aim_data)
+            local flag_value, flag_fn = unpack(m_flag_builder[i]); local is_active, custom_flag = flag_fn(ev, aim_data)
             if is_active then
-                flag_table[flag_it] = custom_flag or flag_value[1]
+                flag_table[flag_it] = custom_flag or flag_value
                 flag_it = flag_it + 1
             end
         end
-
         return flag_table
     end
 
@@ -368,12 +343,12 @@ local g_aimbot_worker =
         aim_data.m_aim_pos, aim_data.m_shot_vector = vector(client_eye_position()), vector(ev.x, ev.y, ev.z)
         aim_data.m_command_number, aim_data.m_backtrack_amount = globals_lastoutgoingcommand() + globals_chokedcommands() + 1, math_max(0, globals_tickcount() - ev.tick)
         aim_data.m_hitgroup, aim_data.m_hit_chance, aim_data.m_damage, aim_data.m_hitgroup_class = ev.hitgroup, ev.hit_chance, ev.damage, m_helpers.get_hitgroup_class(ev.hitgroup)
-        aim_data.m_minimum_damage = ui_get(g_mindamage_reference)
+        aim_data.m_minimum_damage = ui_get(m_mindamage_reference)
         aim_data.m_safepoint = m_helpers.is_safe_pointed(ev.target, ev.hitgroup)
 
         if aim_data.m_safepoint then
-            g_aimbot_history_table.m_total_fired_sp_shots = g_aimbot_history_table.m_total_fired_sp_shots + 1
-            g_aimbot_history_table.m_sp_fired_shots_by_hitbox[aim_data.m_hitgroup_class] = g_aimbot_history_table.m_sp_fired_shots_by_hitbox[aim_data.m_hitgroup_class] + 1
+            m_aimbot_history_table.m_total_fired_sp_shots = m_aimbot_history_table.m_total_fired_sp_shots + 1
+            m_aimbot_history_table.m_sp_fired_shots_by_hitbox[aim_data.m_hitgroup_class] = m_aimbot_history_table.m_sp_fired_shots_by_hitbox[aim_data.m_hitgroup_class] + 1
         end
 
         aim_data.m_lethal = false
@@ -381,16 +356,16 @@ local g_aimbot_worker =
         aim_data.m_zeus = bit_band(entity_get_prop(entity_get_player_weapon(me), "m_iItemDefinitionIndex"), 0xFFFF) == 31
         aim_data.m_slowdown, aim_data.m_latency = entity_get_prop(me, "m_flVelocityModifier"), client_latency()
 
-        g_aimbot_history_table.m_total_fired_shots = g_aimbot_history_table.m_total_fired_shots + 1
-        g_aimbot_history_table.m_fired_shots_by_hitbox[aim_data.m_hitgroup_class] = g_aimbot_history_table.m_fired_shots_by_hitbox[aim_data.m_hitgroup_class] + 1
+        m_aimbot_history_table.m_total_fired_shots = m_aimbot_history_table.m_total_fired_shots + 1
+        m_aimbot_history_table.m_fired_shots_by_hitbox[aim_data.m_hitgroup_class] = m_aimbot_history_table.m_fired_shots_by_hitbox[aim_data.m_hitgroup_class] + 1
 
         if aim_data.m_lethal then
-            g_aimbot_history_table.m_total_lethal_shots = g_aimbot_history_table.m_total_lethal_shots + 1
+            m_aimbot_history_table.m_total_lethal_shots = m_aimbot_history_table.m_total_lethal_shots + 1
         end
 
         m_aimbot_shot_tracklist[ev.id] = aim_data
-        m_add_value_to_buffer(g_aimbot_history_table.m_additional_data.m_hitchances, ev.hit_chance, 250)
-        m_add_value_to_buffer(g_aimbot_history_table.m_additional_data.m_backtracks, aim_data.m_backtrack_amount, 250)
+        m_add_value_to_buffer(m_aimbot_history_table.m_additional_data.m_hitchances, ev.hit_chance, 250)
+        m_add_value_to_buffer(m_aimbot_history_table.m_additional_data.m_backtracks, aim_data.m_backtrack_amount, 250)
     end
 
     local m_hitgroups = { "head", "chest", "stomach", "left arm", "right arm", "left leg", "right leg", "neck" }
@@ -409,27 +384,27 @@ local g_aimbot_worker =
 
         local spread_angle = m_get_bullet_spread(shot_id)
 
-        g_aimbot_history_table.m_hits.m_total_hits = g_aimbot_history_table.m_hits.m_total_hits + 1
+        m_aimbot_history_table.m_hits.m_total_hits = m_aimbot_history_table.m_hits.m_total_hits + 1
 
         local hit_data_table =
-            aim_data.m_safepoint and g_aimbot_history_table.m_hits.m_sp_hits or
-            g_aimbot_history_table.m_hits.m_basic_hits
+            aim_data.m_safepoint and m_aimbot_history_table.m_hits.m_sp_hits or
+            m_aimbot_history_table.m_hits.m_basic_hits
 
         hit_data_table.m_count, hit_data_table.m_per_hitbox[hitgroup_class] = hit_data_table.m_count + 1, hit_data_table.m_per_hitbox[hitgroup_class] + 1
 
         local is_damage_mismatch = dealt_damage < mindmg or dealt_damage < aimed_damage; local is_hitbox_mismatch = is_damage_mismatch and aimed_hitgroup ~= hit_hitgroup
 
         if dealt_damage > 100 or aim_data.m_lethal and not is_damage_mismatch then
-            g_aimbot_history_table.m_hits.m_lethal_kills = g_aimbot_history_table.m_hits.m_lethal_kills + 1
+            m_aimbot_history_table.m_hits.m_lethal_kills = m_aimbot_history_table.m_hits.m_lethal_kills + 1
         elseif aim_data.m_lethal and is_damage_mismatch then
-            g_aimbot_history_table.m_hits.m_lethal_mismatches = g_aimbot_history_table.m_hits.m_lethal_mismatches + 1
+            m_aimbot_history_table.m_hits.m_lethal_mismatches = m_aimbot_history_table.m_hits.m_lethal_mismatches + 1
         end
 
         if not entity_is_alive(ev.target) then
-            g_aimbot_history_table.m_total_kills = g_aimbot_history_table.m_total_kills + 1
+            m_aimbot_history_table.m_total_kills = m_aimbot_history_table.m_total_kills + 1
 
             if aim_data.m_zeus then
-                g_aimbot_history_table.m_total_zeus_kills = g_aimbot_history_table.m_total_zeus_kills + 1
+                m_aimbot_history_table.m_total_zeus_kills = m_aimbot_history_table.m_total_zeus_kills + 1
             end
         end
 
@@ -440,7 +415,7 @@ local g_aimbot_worker =
         end
 
         if spread_angle then
-            m_add_value_to_buffer(g_aimbot_history_table.m_additional_data.m_average_spread_angles, spread_angle, 250)
+            m_add_value_to_buffer(m_aimbot_history_table.m_additional_data.m_average_spread_angles, spread_angle, 250)
         end
 
         g_log_worker.add_event_to_log(
@@ -465,7 +440,7 @@ local g_aimbot_worker =
 
     local m_miss_data_tables =
         (function()
-            local t = g_aimbot_history_table.m_misses
+            local t = m_aimbot_history_table.m_misses
             return { ["spread"] = t.m_spread_misses, ["?"] = t.m_unknown_misses, ["prediction error"] = t.m_pred_misses, ["unregistered shot"] = t.m_unreg_misses, ["death"] = t.m_death_misses }
     end)()
 
@@ -480,7 +455,7 @@ local g_aimbot_worker =
             tbl.m_per_hitbox[hitgroup_class] = tbl.m_per_hitbox[hitgroup_class] + 1
         end
 
-        g_aimbot_history_table.m_misses.m_total_misses_by_hitbox[hitgroup_class] = g_aimbot_history_table.m_misses.m_total_misses_by_hitbox[hitgroup_class] + 1
+        m_aimbot_history_table.m_misses.m_total_misses_by_hitbox[hitgroup_class] = m_aimbot_history_table.m_misses.m_total_misses_by_hitbox[hitgroup_class] + 1
     end
 
     local m_miss_data_processor_functions = {
@@ -501,13 +476,13 @@ local g_aimbot_worker =
         end
 
         local miss_reason = ev.reason
-        g_aimbot_history_table.m_misses.m_total_misses = g_aimbot_history_table.m_misses.m_total_misses + 1
+        m_aimbot_history_table.m_misses.m_total_misses = m_aimbot_history_table.m_misses.m_total_misses + 1
         m_miss_data_processor_functions[miss_reason](m_miss_data_tables[miss_reason], aim_data)
 
         local spread_angle = m_get_bullet_spread(id)
 
         if spread_angle then
-            m_add_value_to_buffer(g_aimbot_history_table.m_additional_data.m_average_spread_angles, spread_angle, 250)
+            m_add_value_to_buffer(m_aimbot_history_table.m_additional_data.m_average_spread_angles, spread_angle, 250)
         end
 
         g_log_worker.add_event_to_log(
@@ -528,7 +503,7 @@ local g_aimbot_worker =
         )
     end
 
-    return { on_aim_fire = m_handle_aim_fire, on_bullet_impact = m_handle_bullet_impact, on_aim_hit = m_handle_aim_hit, on_aim_miss = m_handle_aim_miss, get_database_ptr = function() return g_aimbot_history_table end }
+    return { on_aim_fire = m_handle_aim_fire, on_bullet_impact = m_handle_bullet_impact, on_aim_hit = m_handle_aim_hit, on_aim_miss = m_handle_aim_miss, get_database_ptr = function() return m_aimbot_history_table end }
 end)()
 
 local g_container_manager = (function()
@@ -597,15 +572,12 @@ local g_container_manager = (function()
         end
 
         local m_update_aim_data = function()
-            -- here we calculate all the fancy stats and shit for the visuals - the stats for the console implementation are calculated separately (i'm black i know)
-
             if m_aimbot_data_ptr.m_total_fired_shots < 5 then
                 m_aimbot_data_table.m_ready = false
                 return
             end
 
             m_aimbot_data_table.m_total_accuracy_rate = m_aimbot_data_ptr.m_hits.m_total_hits / m_aimbot_data_ptr.m_total_fired_shots
-
             m_aimbot_data_table.m_accuracy_by_spec.sp = m_aimbot_data_ptr.m_hits.m_sp_hits.m_count / math_max(1, m_aimbot_data_ptr.m_total_fired_sp_shots)
             m_aimbot_data_table.m_accuracy_by_spec.lethal = m_aimbot_data_ptr.m_hits.m_lethal_kills / math_max(1, m_aimbot_data_ptr.m_total_lethal_shots)
 
@@ -625,7 +597,6 @@ local g_container_manager = (function()
             m_aimbot_data_table.m_average_hc = m_get_avg_from_table(m_aimbot_data_ptr.m_additional_data.m_hitchances)
             m_aimbot_data_table.m_average_spread = m_get_avg_from_table(m_aimbot_data_ptr.m_additional_data.m_average_spread_angles)
             m_aimbot_data_table.m_average_shots_per_kill = m_aimbot_data_table.m_total_shots / math_max(1, m_aimbot_data_table.m_total_kills)
-
             m_aimbot_data_table.m_ready = true
         end
 
@@ -866,9 +837,7 @@ local g_container_manager = (function()
 
             end
 
-            local m_inversion_progress = 0
-            -- I know I should use easing for this
-            -- however, I will not
+            local m_inversion_progress = 0 -- I know I should use easing for this, however I will not
 
             return function()
                 local current_display_size = m_display_sizes[ui_get(g_statistics_style)]
@@ -947,16 +916,9 @@ local g_container_manager = (function()
 
             return function()
                 local render_table_ptr = m_aimbot_data_ptr.m_renderer_data
-
                 local mouse_down, mouse_x, mouse_y = client_key_state(1), ui_mouse_position()
-
                 local display_sizes = m_display_sizes[ui_get(g_statistics_style)]
-
                 local can_drag = mouse_down and not m_dragging and mouse_x > render_table_ptr.m_draggable_position_x and mouse_x < render_table_ptr.m_draggable_position_x + display_sizes.m_last_width and mouse_y > render_table_ptr.m_draggable_position_y and mouse_y < render_table_ptr.m_draggable_position_y + display_sizes.m_last_height
-
-                -- i know this drag is shit and doesn't account for overlapping objects
-                -- HOWEVER, i do not give a shit and cia operatives will taste the wrath of Allah
-                -- fuck cia
 
                 if can_drag then
                     m_dragging, m_drag_start_x, m_drag_start_y = true, mouse_x - render_table_ptr.m_draggable_position_x, mouse_y - render_table_ptr.m_draggable_position_y
@@ -1020,75 +982,65 @@ local g_console_manager = (function()
             end
 
             local show_handlers = {
-                ["hits"] = function()
-                    local total_shots, total_sp_shots = m_aimbot_data_ptr.m_total_fired_shots, m_aimbot_data_ptr.m_total_fired_sp_shots
+                ["hits"] = (function()
+                    local m_calculate_hitgroup_data = function(total_shots, shots_to_hitbox, hitgroup_name)
+                        local normal_hits, sp_hits = m_aimbot_data_ptr.m_hits.m_basic_hits, m_aimbot_data_ptr.m_hits.m_sp_hits
+                        local aim_rate, accuracy = shots_to_hitbox / math_max(1, total_shots), 0
 
-                    local total_shots_safe, total_sp_shots_safe = math_max(1, total_shots), math_max(1, total_sp_shots)
+                        local total_hits = (normal_hits.m_per_hitbox[hitgroup_name] + sp_hits.m_per_hitbox[hitgroup_name])
+                        accuracy = total_hits / math_max(1, shots_to_hitbox)
 
-                    local hits_table = m_aimbot_data_ptr.m_hits
+                        return aim_rate, accuracy
+                    end
 
-                    local normal_hits_table = hits_table.m_basic_hits
-                    local sp_hits_table = hits_table.m_sp_hits
+                    local m_calculate_total_data = function(total_shots, total_hits)
+                        return total_hits / math_max(1, total_shots)
+                    end
 
-                    local rows, headings = {
-                        { "Hits",
-                            ( "%d (Safe point: %d)" ):format( normal_hits_table.m_per_hitbox.head, sp_hits_table.m_per_hitbox.head ),
-                            ( "%d (Safe point: %d)" ):format( normal_hits_table.m_per_hitbox.body, sp_hits_table.m_per_hitbox.body ),
-                            ( "%d (Safe point: %d)" ):format( normal_hits_table.m_per_hitbox.limbs, sp_hits_table.m_per_hitbox.limbs ),
-                            ( "%d (Safe point: %d)" ):format( normal_hits_table.m_count, sp_hits_table.m_count )
-                        },
+                    local m_hitgroups = {
+                        "head",
+                        "body",
+                        "limbs"
+                    }
 
-                        { "Aim rate",
-                            ( "%.1f%% (Safe point: %.1f%%)" ):format( (m_aimbot_data_ptr.m_fired_shots_by_hitbox.head / total_shots_safe) * 100, (m_aimbot_data_ptr.m_sp_fired_shots_by_hitbox.head / total_shots_safe) * 100 ),
-                            ( "%.1f%% (Safe point: %.1f%%)" ):format( (m_aimbot_data_ptr.m_fired_shots_by_hitbox.body / total_shots_safe) * 100,  (m_aimbot_data_ptr.m_sp_fired_shots_by_hitbox.body / total_shots_safe) * 100 ),
-                            ( "%.1f%% (Safe point: %.1f%%)" ):format( (m_aimbot_data_ptr.m_fired_shots_by_hitbox.limbs / total_shots_safe) * 100, (m_aimbot_data_ptr.m_sp_fired_shots_by_hitbox.limbs / total_shots_safe) * 100 ),
-                        "N/A" },
+                    return function()
+                        local total_shots, total_sp_shots = m_aimbot_data_ptr.m_total_fired_shots, m_aimbot_data_ptr.m_total_fired_sp_shots
+                        local total_shots_safe = math_max(1, total_shots)
+                        
+                        local hits_table = m_aimbot_data_ptr.m_hits
 
-                        { "Accuracy",
-                            ( "%.1f%% (Safe point: %.1f%%)" ):format( (normal_hits_table.m_per_hitbox.head / math_max(1, m_aimbot_data_ptr.m_fired_shots_by_hitbox.head)) * 100,  (sp_hits_table.m_per_hitbox.head / math_max(1, m_aimbot_data_ptr.m_sp_fired_shots_by_hitbox.head)) * 100 ),
-                            ( "%.1f%% (Safe point: %.1f%%)" ):format( (normal_hits_table.m_per_hitbox.body / math_max(1, m_aimbot_data_ptr.m_fired_shots_by_hitbox.body)) * 100,  (sp_hits_table.m_per_hitbox.body / math_max(1, m_aimbot_data_ptr.m_sp_fired_shots_by_hitbox.body)) * 100 ),
-                            ( "%.1f%% (Safe point: %.1f%%)" ):format( (normal_hits_table.m_per_hitbox.limbs / math_max(1, m_aimbot_data_ptr.m_fired_shots_by_hitbox.limbs)) * 100, (sp_hits_table.m_per_hitbox.limbs / math_max(1, m_aimbot_data_ptr.m_sp_fired_shots_by_hitbox.limbs)) * 100 ),
-                            ( "%.1f%% (Safe point: %.1f%%)" ):format( (normal_hits_table.m_count / math_max(1, total_shots - total_sp_shots)) * 100, (sp_hits_table.m_count / total_sp_shots_safe) * 100 )
-                        },
+                        local rows, headings = { {"Aim rate"}, {"Hits"}, {"Accuracy"}}, { "Case", "Head", "Body", "Limbs", "Total" }
 
-                        { "Mismatches",
-                            ( "%d (%.1f%%) (Safe point: %d (%.1f%%) )" ):format(
-                                normal_hits_table.m_mismatches_per_hitbox.head, (normal_hits_table.m_mismatches_per_hitbox.head / math_max(1, hits_table.m_total_hits)) * 100,
-                                sp_hits_table.m_mismatches_per_hitbox.head, (sp_hits_table.m_mismatches_per_hitbox.head / math_max(1, hits_table.m_total_hits)) * 100
-                            ),
-                            ( "%d (%.1f%%) (Safe point: %d (%.1f%%) )" ):format(
-                                normal_hits_table.m_mismatches_per_hitbox.body, (normal_hits_table.m_mismatches_per_hitbox.body / math_max(1, hits_table.m_total_hits)) * 100,
-                                sp_hits_table.m_mismatches_per_hitbox.body, (sp_hits_table.m_mismatches_per_hitbox.body / math_max(1, hits_table.m_total_hits)) * 100
-                            ),
-                            ( "%d (%.1f%%) (Safe point: %d (%.1f%%) )" ):format(
-                                normal_hits_table.m_mismatches_per_hitbox.limbs, (normal_hits_table.m_mismatches_per_hitbox.limbs / math_max(1, hits_table.m_total_hits)) * 100,
-                                sp_hits_table.m_mismatches_per_hitbox.limbs, (sp_hits_table.m_mismatches_per_hitbox.limbs / math_max(1, hits_table.m_total_hits)) * 100
-                            ),
-                            ( "%d (%.1f%%) (Safe point: %d (%.1f%%) )" ):format(
-                                normal_hits_table.m_mismatches, (normal_hits_table.m_mismatches / math_max(1, hits_table.m_total_hits)) * 100,
-                                sp_hits_table.m_mismatches, (sp_hits_table.m_mismatches / math_max(1, hits_table.m_total_hits)) * 100
-                            )
-                        }
-                    }, { "Case", "Head", "Body", "Limbs", "Total" }
+                        for i = 1, #m_hitgroups do
+                            local hitgroup = m_hitgroups[i]
+                            local aimrate, accuracy = m_calculate_hitgroup_data(total_shots, m_aimbot_data_ptr.m_fired_shots_by_hitbox[hitgroup], hitgroup)
 
-                    client_log("\n", table_gen(rows, headings, { style = "Unicode (Single Line)" }))
-                    client_log( ("Total attempted lethal shots %d (%.1f%% of total shots), successful lethal shots %d (%.1f%%, mismatches %.1f%%)"):format(
-                        m_aimbot_data_ptr.m_total_lethal_shots,
-                        (m_aimbot_data_ptr.m_total_lethal_shots / total_shots_safe) * 100,
-                        hits_table.m_lethal_kills,
-                        (hits_table.m_lethal_kills / math_max(1, hits_table.m_total_hits)) * 100,
-                        (hits_table.m_lethal_mismatches / math_max(1, m_aimbot_data_ptr.m_total_lethal_shots)) * 100
-                    ) )
-                    client_log( ("Average lag compensation tick count: %dt"):format(
-                        m_get_average(m_aimbot_data_ptr.m_additional_data.m_backtracks) -- i know i'm repeating myself, cope
-                    ) )
-                    client_log( ("Average aimbot hit chance: %.2f%%"):format(
-                        m_get_average(m_aimbot_data_ptr.m_additional_data.m_hitchances)
-                    ) )
-                    client_log( ("Average bullets needed to kill an enemy: %.2f shots"):format(
-                        m_aimbot_data_ptr.m_total_kills / total_shots_safe
-                    ) )
-                end,
+                            rows[1][#rows[1]+1] = ("%.1f%%"):format(aimrate * 100)
+                            rows[2][#rows[2]+1] = m_aimbot_data_ptr.m_fired_shots_by_hitbox[hitgroup]
+                            rows[3][#rows[3]+1] = ("%.1f%%"):format(accuracy * 100)
+                        end
+
+                        local total_accuracy = m_calculate_total_data(total_shots, hits_table.m_total_hits)
+                        
+                        rows[1][5], rows[2][5], rows[3][5] = "N/A", ("%d"):format(hits_table.m_total_hits), ("%.1f%%"):format(total_accuracy * 100)
+
+                        client_log( ("Data from the previous %d shots:\n"):format(total_shots), table_gen(rows, headings, { style = "Unicode (Single Line)" } ) )
+                        client_log( ("Safe point accuracy: %.1f%%"):format( ( hits_table.m_sp_hits.m_count / math_max(1, total_sp_shots) ) * 100 ) )
+                        client_log( ("Total attempted lethal shots %d, successful lethal shots %d"):format(
+                            m_aimbot_data_ptr.m_total_lethal_shots,
+                            hits_table.m_lethal_kills
+                        ) )
+                        client_log( ("Average lag compensation tick count: %dt"):format(
+                            m_get_average(m_aimbot_data_ptr.m_additional_data.m_backtracks)
+                        ) )
+                        client_log( ("Average aimbot hit chance: %.2f%%"):format(
+                            m_get_average(m_aimbot_data_ptr.m_additional_data.m_hitchances)
+                        ) )
+                        client_log( ("Average bullets needed to kill an enemy: %.2f shots"):format(
+                            total_shots_safe / m_aimbot_data_ptr.m_total_kills
+                        ) )
+                    end 
+                end)(),
 
                 ["misses"] = function()
                     local total_shots = m_aimbot_data_ptr.m_total_fired_shots; local total_shots_safe = math_max(1, total_shots)
@@ -1107,10 +1059,10 @@ local g_console_manager = (function()
                     local m_build_miss_reason_table = function(name, t)
                         return {
                             name,
-                            ( "%d misses (%.1f%%), safe point: %d (%.1f%%)" ):format(t.m_per_hitbox.head, (t.m_per_hitbox.head / total_head_safe) * 100, t.m_sp_per_hitbox.head, ( t.m_sp_per_hitbox.head / total_head_safe ) * 100),
-                            ( "%d misses (%.1f%%), safe point: %d (%.1f%%)" ):format(t.m_per_hitbox.body, (t.m_per_hitbox.body / total_body_safe) * 100, t.m_sp_per_hitbox.body, ( t.m_sp_per_hitbox.body / total_body_safe ) * 100),
-                            ( "%d misses (%.1f%%), safe point: %d (%.1f%%)" ):format(t.m_per_hitbox.limbs, (t.m_per_hitbox.limbs / total_limbs_safe) * 100, t.m_sp_per_hitbox.limbs, ( t.m_sp_per_hitbox.limbs / total_limbs_safe ) * 100),
-                            ( "%d misses (%.1f%%), safe point: %d (%.1f%%)" ):format(t.m_count, (t.m_count / total_misses_safe) * 100, t.m_sp_count, (t.m_sp_count / total_misses_safe) * 100)
+                            ( "%d misses (%.1f%% misses, %.1f%% shots)" ):format(t.m_per_hitbox.head + t.m_sp_per_hitbox.head, ( ( t.m_per_hitbox.head + t.m_sp_per_hitbox.head ) / total_head_safe) * 100, ( ( t.m_per_hitbox.head + t.m_sp_per_hitbox.head ) / m_aimbot_data_ptr.m_fired_shots_by_hitbox.head ) * 100),
+                            ( "%d misses (%.1f%% misses, %.1f%% shots)" ):format(t.m_per_hitbox.body + t.m_sp_per_hitbox.body, ( ( t.m_per_hitbox.body + t.m_sp_per_hitbox.body ) / total_body_safe) * 100, ( ( t.m_per_hitbox.body + t.m_sp_per_hitbox.body ) / m_aimbot_data_ptr.m_fired_shots_by_hitbox.body ) * 100),
+                            ( "%d misses (%.1f%% misses, %.1f%% shots)" ):format(t.m_per_hitbox.limbs + t.m_sp_per_hitbox.limbs, ( ( t.m_per_hitbox.limbs + t.m_sp_per_hitbox.limbs ) / total_limbs_safe) * 100, ( ( t.m_per_hitbox.limbs + t.m_sp_per_hitbox.limbs )  / m_aimbot_data_ptr.m_fired_shots_by_hitbox.limbs ) * 100),
+                            ( "%d misses (%.1f%% misses, %.1f%% shots)" ):format(t.m_count + t.m_sp_count, ( ( t.m_count + t.m_sp_count ) / total_misses_safe) * 100, ( ( t.m_count + t.m_sp_count ) / total_shots_safe) * 100)
                         }
                     end
 
@@ -1186,9 +1138,7 @@ local g_console_manager = (function()
         end
     end
 
-    return {
-       on_console_input = m_handle_console_input
-    }
+    return { on_console_input = m_handle_console_input }
 end)()
 
 local g_paint_callback = function()
@@ -1246,5 +1196,4 @@ for _, v in pairs({
 end
 
 g_ui_callback()
-
 ui_set_callback(g_master_switch, g_ui_callback)
